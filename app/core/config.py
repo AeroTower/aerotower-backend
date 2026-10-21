@@ -13,6 +13,8 @@ load_dotenv()
 # em render.yaml (chave MQTT_BROKER) — ver DEPLOY.md.
 BROKER    = os.getenv("MQTT_BROKER", "47d5de0ce14d4654a95021e273720719.s1.eu.hivemq.cloud")
 PORT      = int(os.getenv("MQTT_PORT", "8883"))
+# false so para testar com um broker local sem TLS (mosquitto na 1883).
+MQTT_TLS  = os.getenv("MQTT_TLS", "true").strip().lower() != "false"
 
 # Sem valor embutido de proposito: credencial com default no codigo vai
 # parar no git, e foi o que aconteceu — a senha antiga esta no historico
