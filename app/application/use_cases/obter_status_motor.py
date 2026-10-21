@@ -7,8 +7,8 @@ class ObterStatusMotor:
     def __init__(self, estado: EstadoDeMonitoramento):
         self._estado = estado
 
-    def executar(self) -> StatusMotor:
-        status = self._estado.ultimo_status_motor()
+    def executar(self, torre_id: str) -> StatusMotor:
+        status = self._estado.ultimo_status_motor(torre_id)
         if status is None:
-            raise NenhumDadoDisponivel("Nenhum status do motor recebido ainda.")
+            raise NenhumDadoDisponivel("Nenhum status do motor recebido ainda desta torre.")
         return status

@@ -14,7 +14,11 @@ class LeituraSensores:
 
     @property
     def ec(self) -> Optional[float]:
-        return self._valor("ec")
+        # O firmware mede TDS em ppm; EC (mS/cm) ~= TDS / 500.
+        ec = self._valor("ec")
+        if ec is None and self._valor("tds") is not None:
+            ec = round(self._valor("tds") / 500.0, 2)
+        return ec
 
     @property
     def temperatura_agua(self) -> Optional[float]:
@@ -22,11 +26,12 @@ class LeituraSensores:
 
     @property
     def temperatura_ambiente(self) -> Optional[float]:
-        return self._valor("temperaturaAmbiente")
+        # "temperatura"/"umidade" sao os nomes do firmware antigo (SHT3x).
+        return self._primeiro("temperaturaAmbiente", "temperatura")
 
     @property
     def umidade_relativa(self) -> Optional[float]:
-        return self._valor("umidadeRelativa")
+        return self._primeiro("umidadeRelativa", "umidade")
 
     @property
     def nivel_agua(self) -> Optional[float]:
@@ -34,7 +39,16 @@ class LeituraSensores:
 
     def _valor(self, chave: str) -> Optional[float]:
         valor = self.bruto.get(chave)
+        if isinstance(valor, bool):
+            return None
         return valor if isinstance(valor, (int, float)) else None
+
+    def _primeiro(self, *chaves: str) -> Optional[float]:
+        for chave in chaves:
+            valor = self._valor(chave)
+            if valor is not None:
+                return valor
+        return None
 
 
 @dataclass

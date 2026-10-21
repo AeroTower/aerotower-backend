@@ -6,7 +6,7 @@ class DesligarMotor:
     def __init__(self, publicador: PublicadorDeComandos):
         self._publicador = publicador
 
-    def executar(self) -> ComandoMotor:
+    def executar(self, torre_id: str) -> ComandoMotor:
         comando = ComandoMotor(acao="desligar")
-        self._publicador.publicar(comando)
+        self._publicador.publicar(torre_id, comando)
         return comando

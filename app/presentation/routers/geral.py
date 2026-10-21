@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.core.config import TOPIC_SENSORES
+from app.core.config import MQTT_PREFIXO
 
 router = APIRouter(tags=["Geral"])
 
@@ -9,5 +9,5 @@ router = APIRouter(tags=["Geral"])
 def home():
     return {
         "message":   "Backend Hidropônica rodando",
-        "mqttTopic": TOPIC_SENSORES
+        "mqttTopic": f"{MQTT_PREFIXO}/<torre_id>/sensores",
     }

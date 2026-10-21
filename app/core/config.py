@@ -22,9 +22,40 @@ MQTT_USER = os.getenv("MQTT_USER", "")
 MQTT_PASS = os.getenv("MQTT_PASS", "")
 
 # ── Tópicos ───────────────────────────────
+# Cada torre tem a sua "caixa": {MQTT_PREFIXO}/{torre_id}/sensores etc.
+# (ver app/infrastructure/messaging/topicos.py).
+MQTT_PREFIXO = os.getenv("MQTT_PREFIXO", "aerotower").strip("/")
+
+# Topicos antigos, de antes de existir uma caixa por torre. Continuam
+# assinados durante a transicao e tudo que chega neles conta como a
+# TORRE_LEGADA — o firmware/simulador que ainda nao foi atualizado e o
+# painel atual (rotas /dados, /motor/...) seguem funcionando.
 TOPIC_SENSORES      = os.getenv("MQTT_TOPIC_SENSORES", "hidroponia/sensores")
 TOPIC_MOTOR_COMANDO = os.getenv("MQTT_TOPIC_MOTOR_COMANDO", "hidroponia/motor/comando")
 TOPIC_MOTOR_STATUS  = os.getenv("MQTT_TOPIC_MOTOR_STATUS", "hidroponia/motor/status")
+TORRE_LEGADA        = os.getenv("TORRE_LEGADA", "AT-LEGADO").strip().upper()
+
+# ── Login ─────────────────────────────────
+# Client IDs OAuth do Google aceitos (web, Android, iOS), separados por
+# virgula. Sao publicos — mas so tokens emitidos para eles passam.
+GOOGLE_CLIENT_IDS = [
+    c.strip() for c in os.getenv("GOOGLE_CLIENT_IDS", "").split(",") if c.strip()
+]
+
+# Assina o token de sessao proprio do back-end. Em producao TEM de vir do
+# ambiente; sem ele, um valor aleatorio por processo faz todo mundo
+# precisar logar de novo a cada reinicio (seguro, mas chato).
+JWT_SEGREDO     = os.getenv("JWT_SEGREDO", "")
+JWT_VALIDADE_DIAS = int(os.getenv("JWT_VALIDADE_DIAS", "30"))
+
+# Liga POST /auth/dev, que aceita qualquer id sem Google. E o "token
+# generico" para desenvolver o app enquanto o login real nao fica pronto.
+# NUNCA deixe true em producao.
+AUTH_MODO_DEV = os.getenv("AUTH_MODO_DEV", "false").strip().lower() in ("1", "true", "sim")
+
+# Chave das rotas /admin (cadastro de torres na fabrica). Vazia = rotas
+# desligadas.
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 
 # ── Banco de dados ────────────────────────
 # Em Azure o valor deve vir via variavel de ambiente do App Service.
