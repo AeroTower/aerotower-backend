@@ -2,6 +2,7 @@ import secrets
 from typing import Iterator, Optional
 
 from fastapi import Depends, Header, Path
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.application.use_cases.atualizar_thresholds import AtualizarThresholds
@@ -200,10 +201,9 @@ def get_torre_repository(
     yield SqlAlchemyTorreRepository(session)
 
 
-def _token_do_header(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise NaoAutenticado("Envie o header Authorization: Bearer <token>.")
-    return authorization.split(" ", 1)[1].strip()
+# HTTPBearer (e nao um Header "authorization") faz o /docs mostrar o botao
+# Authorize: o Swagger ignora parametro de cabecalho chamado Authorization.
+_bearer = HTTPBearer(auto_error=False, description="Token do serviço de autenticação (aerotower-auth)")
 
 
 def usuario_do_token(token: str) -> str:
@@ -211,8 +211,12 @@ def usuario_do_token(token: str) -> str:
     return container.validador_sessao.validar(token)
 
 
-def get_usuario_id(authorization: Optional[str] = Header(default=None)) -> str:
-    return usuario_do_token(_token_do_header(authorization))
+def get_usuario_id(
+    credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> str:
+    if credenciais is None:
+        raise NaoAutenticado("Envie o header Authorization: Bearer <token>.")
+    return usuario_do_token(credenciais.credentials.strip())
 
 
 def get_torre_do_usuario(
