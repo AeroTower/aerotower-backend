@@ -34,3 +34,30 @@ class EmailInvalido(ErroDeDominio):
 class EventoInvalido(ErroDeDominio):
     def __init__(self, motivo: str):
         super().__init__(motivo)
+
+
+# ── Torres, usuarios e acesso ──────────────
+
+class NaoAutenticado(ErroDeDominio):
+    def __init__(self, motivo: str = "Login necessário."):
+        super().__init__(motivo)
+
+
+class TorreNaoEncontrada(ErroDeDominio):
+    # Usada tambem quando a torre existe mas e de outra pessoa: responder
+    # 403 contaria a um curioso que aquele id existe.
+    def __init__(self, torre_id: str):
+        self.torre_id = torre_id
+        super().__init__(f"Torre {torre_id} não encontrada.")
+
+
+class IdDeTorreInvalido(ErroDeDominio):
+    def __init__(self, torre_id: str):
+        super().__init__(
+            f"Id de torre inválido: {torre_id!r}. Use o formato AT-<MAC>, ex.: AT-24DCC3A1B2C4."
+        )
+
+
+class AcessoNegado(ErroDeDominio):
+    def __init__(self, motivo: str = "Acesso negado."):
+        super().__init__(motivo)

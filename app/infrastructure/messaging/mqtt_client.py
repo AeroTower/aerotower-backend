@@ -2,7 +2,7 @@ import logging
 
 import paho.mqtt.client as mqtt
 
-from app.core.config import BROKER, MQTT_PASS, MQTT_USER, PORT
+from app.core.config import BROKER, MQTT_PASS, MQTT_TLS, MQTT_USER, PORT
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 def criar_cliente() -> mqtt.Client:
     cliente = mqtt.Client()
     cliente.username_pw_set(MQTT_USER, MQTT_PASS)
-    cliente.tls_set()
+    if MQTT_TLS:
+        cliente.tls_set()
     return cliente
 
 

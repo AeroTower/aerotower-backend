@@ -14,12 +14,13 @@ class ProcessarStatusMotor:
         self._estado = estado
         self._notificador = notificador
 
-    def executar(self, dados: Dict[str, Any]) -> StatusMotor:
+    def executar(self, torre_id: str, dados: Dict[str, Any]) -> StatusMotor:
         status = StatusMotor(bruto=dados, recebido_em=datetime.now())
-        self._estado.salvar_status_motor(status)
-        logger.info("Motor status: %s", dados)
+        self._estado.salvar_status_motor(torre_id, status)
+        logger.info("Motor status [%s]: %s", torre_id, dados)
 
-        self._notificador.notificar({
-            "motorStatus": {**status.bruto, "recebidoEm": status.recebido_em.isoformat()}
+        self._notificador.notificar(torre_id, {
+            "torreId":     torre_id,
+            "motorStatus": {**status.bruto, "recebidoEm": status.recebido_em.isoformat()},
         })
         return status

@@ -16,10 +16,12 @@ from app.presentation.middleware.cors import registrar_cors
 from app.presentation.routers import (
     eventos,
     geral,
+    internal,
     motor,
     plantas,
     sensores,
     thresholds,
+    torres,
     websocket,
 )
 
@@ -60,6 +62,8 @@ registrar_cors(app)
 registrar_handlers(app)
 
 app.include_router(geral.router)
+app.include_router(torres.router)
+app.include_router(internal.router)
 app.include_router(sensores.router)
 app.include_router(thresholds.router)
 app.include_router(motor.router)

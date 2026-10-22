@@ -1,10 +1,12 @@
-from typing import Iterator
+import secrets
+from typing import Iterator, Optional
 
-from fastapi import Depends
+from fastapi import Depends, Header, Path
 from sqlalchemy.orm import Session
 
 from app.application.use_cases.atualizar_thresholds import AtualizarThresholds
 from app.application.use_cases.buscar_planta import BuscarPlanta
+from app.application.use_cases.consultar_torres import ListarMinhasTorres, ObterTorreDoUsuario
 from app.application.use_cases.criar_planta import CriarPlanta
 from app.application.use_cases.deletar_planta import DeletarPlanta
 from app.application.use_cases.desligar_motor import DesligarMotor
@@ -20,21 +22,32 @@ from app.application.use_cases.obter_status_motor import ObterStatusMotor
 from app.application.use_cases.obter_thresholds import ObterThresholds
 from app.application.use_cases.obter_ultima_leitura import ObterUltimaLeitura
 from app.application.use_cases.processar_leitura import ProcessarLeitura
+from app.application.use_cases.processar_presenca import ProcessarPresenca
 from app.application.use_cases.processar_status_motor import ProcessarStatusMotor
+from app.application.use_cases.sincronizar_torre import SincronizarTorre
 from app.application.use_cases.registrar_evento import RegistrarEvento
 from app.application.use_cases.registrar_interesse import RegistrarInteresse
+from app.core.config import JWT_SEGREDO, SERVICO_API_KEY
+from app.domain.entities.torre import Torre
+from app.domain.exceptions import AcessoNegado, NaoAutenticado
 from app.domain.services.avaliador_alertas import AvaliadorDeAlertas
 from app.domain.services.validador_evento import ValidadorDeEvento
+from app.infrastructure.auth.jwt_validador import JwtValidador
 from app.infrastructure.messaging.mqtt_client import criar_cliente
 from app.infrastructure.messaging.mqtt_publicador import MqttPublicador
 from app.infrastructure.messaging.mqtt_subscriber import MqttSubscriber
 from app.infrastructure.notifications.websocket_notificador import WebSocketNotificador
+from app.infrastructure.persistence.catalogo_torres import CatalogoSqlAlchemy
 from app.infrastructure.persistence.database import get_session
+from app.infrastructure.persistence.historico_influx import HistoricoInflux
 from app.infrastructure.persistence.sqlalchemy_evento_repository import (
     SqlAlchemyEventoRepository,
 )
 from app.infrastructure.persistence.sqlalchemy_planta_repository import (
     SqlAlchemyPlantaRepository,
+)
+from app.infrastructure.persistence.sqlalchemy_torre_repository import (
+    SqlAlchemyTorreRepository,
 )
 from app.infrastructure.state.estado_memoria import EstadoEmMemoria
 from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoStorage
@@ -49,14 +62,22 @@ class Container:
         self.avaliador     = AvaliadorDeAlertas()
         self.validador_evento = ValidadorDeEvento()
         self.publicador    = MqttPublicador(self.mqtt_client)
+        self.catalogo      = CatalogoSqlAlchemy()
+        self.historico     = HistoricoInflux()
+
+        self.validador_sessao = JwtValidador(JWT_SEGREDO)
 
         self.processar_leitura = ProcessarLeitura(
-            self.estado, self.avaliador, self.notificador
+            self.estado, self.avaliador, self.notificador, self.catalogo, self.historico
         )
         self.processar_status_motor = ProcessarStatusMotor(self.estado, self.notificador)
+        self.processar_presenca     = ProcessarPresenca(self.estado, self.notificador)
 
         self.subscriber = MqttSubscriber(
-            self.mqtt_client, self.processar_leitura, self.processar_status_motor
+            self.mqtt_client,
+            self.processar_leitura,
+            self.processar_status_motor,
+            self.processar_presenca,
         )
 
         self.obter_ultima_leitura = ObterUltimaLeitura(self.estado)
@@ -167,3 +188,60 @@ def get_exportar_eventos(
     repositorio: SqlAlchemyEventoRepository = Depends(get_evento_repository),
 ) -> ExportarEventos:
     return ExportarEventos(repositorio)
+
+
+# =============================================
+# Sessao (token do servico de auth) e acesso as torres
+# =============================================
+
+def get_torre_repository(
+    session: Session = Depends(get_session),
+) -> Iterator[SqlAlchemyTorreRepository]:
+    yield SqlAlchemyTorreRepository(session)
+
+
+def _token_do_header(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise NaoAutenticado("Envie o header Authorization: Bearer <token>.")
+    return authorization.split(" ", 1)[1].strip()
+
+
+def usuario_do_token(token: str) -> str:
+    """Tambem usado pelo WebSocket, que recebe o token na query string."""
+    return container.validador_sessao.validar(token)
+
+
+def get_usuario_id(authorization: Optional[str] = Header(default=None)) -> str:
+    return usuario_do_token(_token_do_header(authorization))
+
+
+def get_torre_do_usuario(
+    torre_id: str = Path(..., description="Id da torre, ex.: AT-24DCC3A1B2C4"),
+    usuario_id: str = Depends(get_usuario_id),
+    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
+) -> Torre:
+    """Toda rota /torres/{torre_id}/... passa por aqui: so o dono entra."""
+    return ObterTorreDoUsuario(torres).executar(usuario_id, torre_id.upper())
+
+
+def get_listar_minhas_torres(
+    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
+) -> ListarMinhasTorres:
+    return ListarMinhasTorres(torres)
+
+
+# =============================================
+# Rota interna (worker do servico de auth)
+# =============================================
+
+def exigir_servico(x_service_key: Optional[str] = Header(default=None)) -> None:
+    if not SERVICO_API_KEY:
+        raise AcessoNegado("Rota interna desligada (SERVICO_API_KEY não definida).")
+    if not x_service_key or not secrets.compare_digest(x_service_key, SERVICO_API_KEY):
+        raise AcessoNegado("Chave de serviço inválida.")
+
+
+def get_sincronizar_torre(
+    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
+) -> SincronizarTorre:
+    return SincronizarTorre(torres)
