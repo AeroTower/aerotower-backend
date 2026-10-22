@@ -4,10 +4,12 @@
 
 name: Build and deploy Python app to Azure Web App - aerotower-backend
 
+# Publica a cada push na main (a antiga branch "apresentacao", renomeada
+# quando o repositorio foi para a organizacao AeroTower).
 on:
   push:
     branches:
-      - apresentacao
+      - main
   workflow_dispatch:
 
 jobs:
