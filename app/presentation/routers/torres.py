@@ -1,21 +1,23 @@
-"""Rotas por torre. Todas exigem login e checam se a torre e de quem pediu."""
+"""Rotas por torre. Todas exigem login e checam se a torre e de quem pediu.
+
+O vinculo (POST /torre/vincular) fica no servico de autenticacao; aqui
+chega pronto, pelo worker.
+"""
 from typing import List
 
 from fastapi import APIRouter, Depends
 
-from app.application.use_cases.ativar_torre import AtivarTorre
 from app.application.use_cases.consultar_torres import ListarMinhasTorres
 from app.domain.entities.torre import Torre
 from app.presentation.deps import (
     container,
-    get_ativar_torre,
     get_listar_minhas_torres,
     get_torre_do_usuario,
     get_usuario_id,
 )
 from app.presentation.schemas.motor import ComandoCiclo
 from app.presentation.schemas.thresholds import ThresholdsUpdate
-from app.presentation.schemas.torre import AtivarTorreRequest, TorreResponse
+from app.presentation.schemas.torre import TorreResponse
 
 router = APIRouter(prefix="/torres", tags=["Torres"])
 
@@ -41,22 +43,6 @@ def listar(
     caso_de_uso: ListarMinhasTorres = Depends(get_listar_minhas_torres),
 ):
     return [para_resposta(t) for t in caso_de_uso.executar(usuario_id)]
-
-
-@router.post(
-    "/ativar",
-    response_model=TorreResponse,
-    status_code=201,
-    summary="Liga a torre do adesivo à conta logada",
-)
-def ativar(
-    body: AtivarTorreRequest,
-    usuario_id: str = Depends(get_usuario_id),
-    caso_de_uso: AtivarTorre = Depends(get_ativar_torre),
-):
-    torre = caso_de_uso.executar(usuario_id, body.codigo, body.apelido)
-    container.catalogo.esquecer(torre.id)
-    return para_resposta(torre)
 
 
 @router.get("/{torre_id}", response_model=TorreResponse, summary="Detalhe de uma torre")

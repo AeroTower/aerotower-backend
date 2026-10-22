@@ -6,10 +6,8 @@ from pathlib import Path
 # Configuracao ANTES de importar o app (config.py le o ambiente no import).
 _pasta = tempfile.mkdtemp()
 os.environ["DATABASE_URL"]  = f"sqlite:///{_pasta}/teste.db"
-os.environ["AUTH_MODO_DEV"] = "true"
-os.environ["ADMIN_API_KEY"] = "chave-de-teste"
-os.environ["JWT_SEGREDO"]   = "segredo-de-teste"
-os.environ["GOOGLE_CLIENT_IDS"] = "cliente-teste.apps.googleusercontent.com"
+os.environ["SERVICO_API_KEY"] = "servico-teste"
+os.environ["JWT_SEGREDO"]     = "segredo-de-teste"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 

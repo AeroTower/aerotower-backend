@@ -51,16 +51,6 @@ class TorreNaoEncontrada(ErroDeDominio):
         super().__init__(f"Torre {torre_id} não encontrada.")
 
 
-class CodigoDeAtivacaoInvalido(ErroDeDominio):
-    def __init__(self):
-        super().__init__("Código de ativação inválido ou já utilizado.")
-
-
-class TorreJaCadastrada(ErroDeDominio):
-    def __init__(self, torre_id: str):
-        super().__init__(f"A torre {torre_id} já está cadastrada.")
-
-
 class IdDeTorreInvalido(ErroDeDominio):
     def __init__(self, torre_id: str):
         super().__init__(

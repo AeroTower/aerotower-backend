@@ -14,10 +14,9 @@ from app.presentation.deps import container
 from app.presentation.exception_handlers import registrar_handlers
 from app.presentation.middleware.cors import registrar_cors
 from app.presentation.routers import (
-    admin,
-    auth,
     eventos,
     geral,
+    internal,
     motor,
     plantas,
     sensores,
@@ -63,9 +62,8 @@ registrar_cors(app)
 registrar_handlers(app)
 
 app.include_router(geral.router)
-app.include_router(auth.router)
 app.include_router(torres.router)
-app.include_router(admin.router)
+app.include_router(internal.router)
 app.include_router(sensores.router)
 app.include_router(thresholds.router)
 app.include_router(motor.router)

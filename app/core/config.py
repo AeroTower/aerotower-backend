@@ -37,27 +37,14 @@ TOPIC_MOTOR_COMANDO = os.getenv("MQTT_TOPIC_MOTOR_COMANDO", "hidroponia/motor/co
 TOPIC_MOTOR_STATUS  = os.getenv("MQTT_TOPIC_MOTOR_STATUS", "hidroponia/motor/status")
 TORRE_LEGADA        = os.getenv("TORRE_LEGADA", "AT-LEGADO").strip().upper()
 
-# ── Login ─────────────────────────────────
-# Client IDs OAuth do Google aceitos (web, Android, iOS), separados por
-# virgula. Sao publicos — mas so tokens emitidos para eles passam.
-GOOGLE_CLIENT_IDS = [
-    c.strip() for c in os.getenv("GOOGLE_CLIENT_IDS", "").split(",") if c.strip()
-]
+# ── Login e servicos ──────────────────────
+# O login e feito pelo servico de autenticacao (auth-aerotower). Ele assina
+# o token com este segredo; o Backend so confere. MESMO valor nos dois.
+JWT_SEGREDO = os.getenv("JWT_SEGREDO", "")
 
-# Assina o token de sessao proprio do back-end. Em producao TEM de vir do
-# ambiente; sem ele, um valor aleatorio por processo faz todo mundo
-# precisar logar de novo a cada reinicio (seguro, mas chato).
-JWT_SEGREDO     = os.getenv("JWT_SEGREDO", "")
-JWT_VALIDADE_DIAS = int(os.getenv("JWT_VALIDADE_DIAS", "30"))
-
-# Liga POST /auth/dev, que aceita qualquer id sem Google. E o "token
-# generico" para desenvolver o app enquanto o login real nao fica pronto.
-# NUNCA deixe true em producao.
-AUTH_MODO_DEV = os.getenv("AUTH_MODO_DEV", "false").strip().lower() in ("1", "true", "sim")
-
-# Chave das rotas /admin (cadastro de torres na fabrica). Vazia = rotas
-# desligadas.
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+# Chave que o worker do servico de auth usa em PUT /internal/torres/{id}.
+# Vazia = rota desligada.
+SERVICO_API_KEY = os.getenv("SERVICO_API_KEY", "")
 
 # ── Banco de dados ────────────────────────
 # Em Azure o valor deve vir via variavel de ambiente do App Service.

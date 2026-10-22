@@ -5,30 +5,21 @@ from app.domain.entities.torre import Torre
 
 
 class TorreRepository(ABC):
+    """Copia local das torres. Quem manda nelas e o servico de autenticacao;
+    o Backend recebe o estado pelos eventos (via worker)."""
+
     @abstractmethod
     def buscar(self, torre_id: str) -> Optional[Torre]:
         ...
-
-    @abstractmethod
-    def buscar_por_codigo(self, codigo_hash: str) -> Optional[Torre]:
-        """Torre ainda nao ativada cujo codigo tem este hash."""
 
     @abstractmethod
     def listar_do_dono(self, dono_id: str) -> List[Torre]:
         ...
 
     @abstractmethod
-    def listar_todas(self) -> List[Torre]:
-        ...
+    def aplicar_estado(self, torre: Torre, versao: int) -> bool:
+        """Grava o estado se `versao` for mais nova que a guardada.
 
-    @abstractmethod
-    def criar(self, torre: Torre, codigo_hash: str) -> Torre:
-        ...
-
-    @abstractmethod
-    def vincular_dono(self, torre_id: str, dono_id: str, apelido: Optional[str]) -> Torre:
-        """Grava o dono e queima o codigo (ele vale uma vez so)."""
-
-    @abstractmethod
-    def trocar_codigo(self, torre_id: str, codigo_hash: str) -> None:
-        """Tira o dono e grava um codigo novo (revenda, troca de conta)."""
+        Devolve False quando o evento e velho (chegou fora de ordem ou
+        repetido) e foi ignorado.
+        """

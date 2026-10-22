@@ -4,15 +4,8 @@ from typing import Iterator, Optional
 from fastapi import Depends, Header, Path
 from sqlalchemy.orm import Session
 
-from app.application.use_cases.ativar_torre import AtivarTorre
 from app.application.use_cases.atualizar_thresholds import AtualizarThresholds
-from app.application.use_cases.autenticar import Autenticar
 from app.application.use_cases.buscar_planta import BuscarPlanta
-from app.application.use_cases.cadastrar_torre import (
-    CadastrarTorre,
-    GerarNovoCodigo,
-    ListarTodasAsTorres,
-)
 from app.application.use_cases.consultar_torres import ListarMinhasTorres, ObterTorreDoUsuario
 from app.application.use_cases.criar_planta import CriarPlanta
 from app.application.use_cases.deletar_planta import DeletarPlanta
@@ -31,22 +24,15 @@ from app.application.use_cases.obter_ultima_leitura import ObterUltimaLeitura
 from app.application.use_cases.processar_leitura import ProcessarLeitura
 from app.application.use_cases.processar_presenca import ProcessarPresenca
 from app.application.use_cases.processar_status_motor import ProcessarStatusMotor
+from app.application.use_cases.sincronizar_torre import SincronizarTorre
 from app.application.use_cases.registrar_evento import RegistrarEvento
 from app.application.use_cases.registrar_interesse import RegistrarInteresse
-from app.core.config import (
-    ADMIN_API_KEY,
-    AUTH_MODO_DEV,
-    GOOGLE_CLIENT_IDS,
-    JWT_SEGREDO,
-    JWT_VALIDADE_DIAS,
-)
+from app.core.config import JWT_SEGREDO, SERVICO_API_KEY
 from app.domain.entities.torre import Torre
 from app.domain.exceptions import AcessoNegado, NaoAutenticado
 from app.domain.services.avaliador_alertas import AvaliadorDeAlertas
 from app.domain.services.validador_evento import ValidadorDeEvento
-from app.infrastructure.auth.dev_verificador import DevVerificador
-from app.infrastructure.auth.google_verificador import GoogleVerificador
-from app.infrastructure.auth.jwt_emissor import JwtEmissor
+from app.infrastructure.auth.jwt_validador import JwtValidador
 from app.infrastructure.messaging.mqtt_client import criar_cliente
 from app.infrastructure.messaging.mqtt_publicador import MqttPublicador
 from app.infrastructure.messaging.mqtt_subscriber import MqttSubscriber
@@ -62,9 +48,6 @@ from app.infrastructure.persistence.sqlalchemy_planta_repository import (
 )
 from app.infrastructure.persistence.sqlalchemy_torre_repository import (
     SqlAlchemyTorreRepository,
-)
-from app.infrastructure.persistence.sqlalchemy_usuario_repository import (
-    SqlAlchemyUsuarioRepository,
 )
 from app.infrastructure.state.estado_memoria import EstadoEmMemoria
 from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoStorage
@@ -82,9 +65,7 @@ class Container:
         self.catalogo      = CatalogoSqlAlchemy()
         self.historico     = HistoricoInflux()
 
-        self.emissor_sessao     = JwtEmissor(JWT_SEGREDO, JWT_VALIDADE_DIAS)
-        self.verificador_google = GoogleVerificador(GOOGLE_CLIENT_IDS)
-        self.verificador_dev    = DevVerificador(AUTH_MODO_DEV)
+        self.validador_sessao = JwtValidador(JWT_SEGREDO)
 
         self.processar_leitura = ProcessarLeitura(
             self.estado, self.avaliador, self.notificador, self.catalogo, self.historico
@@ -210,31 +191,13 @@ def get_exportar_eventos(
 
 
 # =============================================
-# Login, torres e acesso
+# Sessao (token do servico de auth) e acesso as torres
 # =============================================
 
 def get_torre_repository(
     session: Session = Depends(get_session),
 ) -> Iterator[SqlAlchemyTorreRepository]:
     yield SqlAlchemyTorreRepository(session)
-
-
-def get_usuario_repository(
-    session: Session = Depends(get_session),
-) -> Iterator[SqlAlchemyUsuarioRepository]:
-    yield SqlAlchemyUsuarioRepository(session)
-
-
-def get_autenticar_google(
-    usuarios: SqlAlchemyUsuarioRepository = Depends(get_usuario_repository),
-) -> Autenticar:
-    return Autenticar(container.verificador_google, usuarios, container.emissor_sessao)
-
-
-def get_autenticar_dev(
-    usuarios: SqlAlchemyUsuarioRepository = Depends(get_usuario_repository),
-) -> Autenticar:
-    return Autenticar(container.verificador_dev, usuarios, container.emissor_sessao)
 
 
 def _token_do_header(authorization: Optional[str]) -> str:
@@ -245,21 +208,11 @@ def _token_do_header(authorization: Optional[str]) -> str:
 
 def usuario_do_token(token: str) -> str:
     """Tambem usado pelo WebSocket, que recebe o token na query string."""
-    return container.emissor_sessao.validar(token)
+    return container.validador_sessao.validar(token)
 
 
 def get_usuario_id(authorization: Optional[str] = Header(default=None)) -> str:
     return usuario_do_token(_token_do_header(authorization))
-
-
-def get_usuario_atual(
-    usuario_id: str = Depends(get_usuario_id),
-    usuarios: SqlAlchemyUsuarioRepository = Depends(get_usuario_repository),
-):
-    usuario = usuarios.buscar(usuario_id)
-    if usuario is None:
-        raise NaoAutenticado("Usuário não encontrado. Faça login de novo.")
-    return usuario
 
 
 def get_torre_do_usuario(
@@ -271,12 +224,6 @@ def get_torre_do_usuario(
     return ObterTorreDoUsuario(torres).executar(usuario_id, torre_id.upper())
 
 
-def get_ativar_torre(
-    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
-) -> AtivarTorre:
-    return AtivarTorre(torres)
-
-
 def get_listar_minhas_torres(
     torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
 ) -> ListarMinhasTorres:
@@ -284,29 +231,17 @@ def get_listar_minhas_torres(
 
 
 # =============================================
-# Admin (fabrica)
+# Rota interna (worker do servico de auth)
 # =============================================
 
-def exigir_admin(x_admin_key: Optional[str] = Header(default=None)) -> None:
-    if not ADMIN_API_KEY:
-        raise AcessoNegado("Rotas de admin desligadas (ADMIN_API_KEY não definida).")
-    if not x_admin_key or not secrets.compare_digest(x_admin_key, ADMIN_API_KEY):
-        raise AcessoNegado("Chave de admin inválida.")
+def exigir_servico(x_service_key: Optional[str] = Header(default=None)) -> None:
+    if not SERVICO_API_KEY:
+        raise AcessoNegado("Rota interna desligada (SERVICO_API_KEY não definida).")
+    if not x_service_key or not secrets.compare_digest(x_service_key, SERVICO_API_KEY):
+        raise AcessoNegado("Chave de serviço inválida.")
 
 
-def get_cadastrar_torre(
+def get_sincronizar_torre(
     torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
-) -> CadastrarTorre:
-    return CadastrarTorre(torres)
-
-
-def get_gerar_novo_codigo(
-    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
-) -> GerarNovoCodigo:
-    return GerarNovoCodigo(torres)
-
-
-def get_listar_todas_as_torres(
-    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
-) -> ListarTodasAsTorres:
-    return ListarTodasAsTorres(torres)
+) -> SincronizarTorre:
+    return SincronizarTorre(torres)

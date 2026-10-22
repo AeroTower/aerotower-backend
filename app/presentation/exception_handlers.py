@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 
 from app.domain.exceptions import (
     AcessoNegado,
-    CodigoDeAtivacaoInvalido,
     EmailInvalido,
     EventoInvalido,
     FalhaNaPublicacao,
@@ -12,7 +11,6 @@ from app.domain.exceptions import (
     NaoAutenticado,
     NenhumDadoDisponivel,
     PlantaNaoEncontrada,
-    TorreJaCadastrada,
     TorreNaoEncontrada,
 )
 
@@ -26,8 +24,6 @@ _STATUS_POR_EXCECAO = {
     NaoAutenticado:           401,
     AcessoNegado:             403,
     TorreNaoEncontrada:       404,
-    CodigoDeAtivacaoInvalido: 400,
-    TorreJaCadastrada:        409,
     IdDeTorreInvalido:        422,
 }
 
