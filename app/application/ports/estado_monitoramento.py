@@ -25,3 +25,7 @@ class EstadoDeMonitoramento(ABC):
     @abstractmethod
     def thresholds(self) -> Thresholds:
         ...
+
+    @abstractmethod
+    def salvar_thresholds(self, thresholds: Thresholds) -> None:
+        ...

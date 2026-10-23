@@ -31,3 +31,6 @@ class EstadoEmMemoria(EstadoDeMonitoramento):
 
     def thresholds(self) -> Thresholds:
         return self._thresholds
+    
+    def salvar_thresholds(self, thresholds: Thresholds) -> None:
+        pass  # em memória o objeto já foi alterado, não há o que salvar

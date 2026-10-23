@@ -38,12 +38,13 @@ from app.infrastructure.persistence.sqlalchemy_planta_repository import (
 )
 from app.infrastructure.state.estado_memoria import EstadoEmMemoria
 from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoStorage
-
+from app.core.config import REDIS_URL
+from app.infrastructure.state.estado_redis import EstadoRedis
 
 class Container:
     def __init__(self):
         self.mqtt_client   = criar_cliente()
-        self.estado        = EstadoEmMemoria()
+        self.estado        = EstadoRedis(REDIS_URL) if REDIS_URL else EstadoEmMemoria()
         self.notificador   = WebSocketNotificador()
         self.armazenamento = FilesystemFotoStorage()
         self.avaliador     = AvaliadorDeAlertas()

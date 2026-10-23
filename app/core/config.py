@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Le o .env da raiz quando ele existe, para o desenvolvimento local nao
 # depender de exportar variavel na mao. Em producao (Render) o arquivo nao
 # existe e as variaveis ja vem do ambiente — load_dotenv nao sobrescreve.
-load_dotenv()
+load_dotenv(r"C:\Users\User\Desktop\proojeto2\env.env")
 
 # ── MQTT ──────────────────────────────────
 # Endereco e porta do broker: podem ser editados aqui, inclusive pelo editor
@@ -47,3 +47,6 @@ EXTENSOES_ACEITAS  = ["jpg", "jpeg", "png", "webp"]
 
 # ── Log ───────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+#REDIS
+REDIS_URL = os.getenv("REDIS_URL", "")
