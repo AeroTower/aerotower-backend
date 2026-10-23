@@ -11,6 +11,8 @@ class PlantaModel(Base):
     tipo         = Column(String, nullable=False)
     data_plantio = Column(String, nullable=False)
     foto_url     = Column(String, nullable=True)
+    # Torre dona da planta; NULL = planta de antes das varias torres.
+    torre_id     = Column(String, nullable=True, index=True)
 
 
 class EventoModel(Base):

@@ -141,3 +141,48 @@ def test_websocket_so_recebe_as_proprias_torres(app_e_mqtt):
         _publicar(container, f"aerotower/{t1}/sensores", {"ph": 6.2})
         msg = ws.receive_json()
         assert msg["torreId"] == t1 and msg["dados"]["ph"] == 6.2
+
+
+def test_plantas_sao_de_cada_torre(app_e_mqtt):
+    cliente, _, _ = app_e_mqtt
+    t1, t2 = _id_torre(), _id_torre()
+    _sincronizar(cliente, t1, dono="maria", versao=2)
+    _sincronizar(cliente, t2, dono="joao", versao=2)
+    maria, joao = _h("maria"), _h("joao")
+
+    r = cliente.post(f"/torres/{t1}/plantas", headers=maria,
+                     data={"nome": "Manjericão", "tipo": "erva", "data_plantio": "2026-10-23"})
+    assert r.status_code == 201, r.text
+    planta_id = r.json()["id"]
+    cliente.post(f"/torres/{t2}/plantas", headers=joao,
+                 data={"nome": "Alface", "tipo": "folhosa", "data_plantio": "2026-10-23"})
+
+    assert [p["nome"] for p in cliente.get(f"/torres/{t1}/plantas", headers=maria).json()] == ["Manjericão"]
+    assert [p["nome"] for p in cliente.get(f"/torres/{t2}/plantas", headers=joao).json()] == ["Alface"]
+
+    # João não vê nem apaga a planta da Maria
+    assert cliente.get(f"/torres/{t1}/plantas", headers=joao).status_code == 404
+    assert cliente.delete(f"/torres/{t2}/plantas/{planta_id}", headers=joao).status_code == 404
+    assert cliente.delete(f"/torres/{t1}/plantas/{planta_id}", headers=joao).status_code == 404
+
+    # As rotas legadas não enxergam plantas de torre
+    assert all(p["id"] != planta_id for p in cliente.get("/plantas").json())
+
+    assert cliente.delete(f"/torres/{t1}/plantas/{planta_id}", headers=maria).status_code == 200
+    assert cliente.get(f"/torres/{t1}/plantas", headers=maria).json() == []
+
+
+def test_migracao_adiciona_torre_id_em_tabela_antiga(tmp_path):
+    from sqlalchemy import create_engine, inspect, text
+    from app.infrastructure.persistence import migracoes
+
+    engine = create_engine(f"sqlite:///{tmp_path}/antigo.db")
+    with engine.begin() as c:
+        c.execute(text("CREATE TABLE plantas (id INTEGER PRIMARY KEY, nome VARCHAR, tipo VARCHAR, "
+                       "data_plantio VARCHAR, foto_url VARCHAR)"))
+        c.execute(text("INSERT INTO plantas (nome, tipo, data_plantio) VALUES ('Velha', 'x', '2026-05-01')"))
+    migracoes.aplicar(engine)
+    migracoes.aplicar(engine)   # segunda vez não faz nada
+    assert "torre_id" in {col["name"] for col in inspect(engine).get_columns("plantas")}
+    with engine.begin() as c:
+        assert c.execute(text("SELECT torre_id FROM plantas")).scalar() is None
