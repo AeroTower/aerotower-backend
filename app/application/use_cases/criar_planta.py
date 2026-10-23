@@ -21,6 +21,7 @@ class CriarPlanta:
         data_plantio: str,
         nome_arquivo_foto: Optional[str] = None,
         conteudo_foto: Optional[bytes] = None,
+        torre_id: Optional[str] = None,
     ) -> Planta:
         foto_url = None
         if nome_arquivo_foto and conteudo_foto is not None:
@@ -31,7 +32,8 @@ class CriarPlanta:
             foto_url = await self._armazenamento.salvar(conteudo_foto, extensao)
 
         planta = self._repositorio.criar(
-            Planta(nome=nome, tipo=tipo, data_plantio=data_plantio, foto_url=foto_url)
+            Planta(nome=nome, tipo=tipo, data_plantio=data_plantio, foto_url=foto_url,
+                   torre_id=torre_id)
         )
-        logger.info("Planta cadastrada: %s (%s)", planta.nome, planta.tipo)
+        logger.info("Planta cadastrada: %s (%s) na torre %s", planta.nome, planta.tipo, torre_id)
         return planta

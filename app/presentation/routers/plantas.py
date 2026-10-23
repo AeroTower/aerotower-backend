@@ -12,7 +12,9 @@ from app.presentation.deps import (
 )
 from app.presentation.schemas.planta import PlantaResponse
 
-router = APIRouter(prefix="/plantas", tags=["Plantas"])
+# Legado: so as plantas antigas, sem torre (sem login). O app usa
+# /torres/{id}/plantas. Apagar junto com as outras rotas legadas.
+router = APIRouter(prefix="/plantas", tags=["Legado (torre única)"], deprecated=True)
 
 
 @router.get("", response_model=list[PlantaResponse], summary="Lista todas as plantas")

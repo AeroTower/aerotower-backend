@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import DATABASE_URL, DIRETORIO_ESTATICO, DIRETORIO_FOTOS
 from app.core.logging_config import configurar_logging
 from app.infrastructure.messaging.mqtt_client import conectar, desconectar
-from app.infrastructure.persistence import models  # noqa: F401
+from app.infrastructure.persistence import migracoes, models  # noqa: F401
 from app.infrastructure.persistence.database import Base, engine
 from app.presentation.deps import container
 from app.presentation.exception_handlers import registrar_handlers
@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
     container.notificador.definir_event_loop(asyncio.get_running_loop())
 
     Base.metadata.create_all(bind=engine)
+    migracoes.aplicar(engine)
 
     container.subscriber.registrar()
     conectar(container.mqtt_client)

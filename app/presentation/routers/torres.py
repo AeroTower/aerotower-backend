@@ -5,17 +5,26 @@ chega pronto, pelo worker.
 """
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
+from app.application.use_cases.buscar_planta import BuscarPlanta
 from app.application.use_cases.consultar_torres import ListarMinhasTorres
+from app.application.use_cases.criar_planta import CriarPlanta
+from app.application.use_cases.deletar_planta import DeletarPlanta
+from app.application.use_cases.listar_plantas import ListarPlantas
 from app.domain.entities.torre import Torre
 from app.presentation.deps import (
     container,
+    get_buscar_planta,
+    get_criar_planta,
+    get_deletar_planta,
+    get_listar_plantas,
     get_listar_minhas_torres,
     get_torre_do_usuario,
     get_usuario_id,
 )
 from app.presentation.schemas.motor import ComandoCiclo
+from app.presentation.schemas.planta import PlantaResponse
 from app.presentation.schemas.thresholds import ThresholdsUpdate
 from app.presentation.schemas.torre import TorreResponse
 
@@ -108,3 +117,47 @@ def desligar(torre: Torre = Depends(get_torre_do_usuario)):
 def status_motor(torre: Torre = Depends(get_torre_do_usuario)):
     status = container.obter_status_motor.executar(torre.id)
     return {**status.bruto, "recebidoEm": status.recebido_em.isoformat()}
+
+
+# ── Plantas (cada torre tem as suas) ─────
+
+@router.get("/{torre_id}/plantas", response_model=List[PlantaResponse], summary="Plantas desta torre")
+def listar_plantas(
+    torre: Torre = Depends(get_torre_do_usuario),
+    caso_de_uso: ListarPlantas = Depends(get_listar_plantas),
+):
+    return caso_de_uso.executar(torre.id)
+
+
+@router.post("/{torre_id}/plantas", response_model=PlantaResponse, status_code=201,
+             summary="Cadastra uma planta nesta torre")
+async def criar_planta(
+    nome:         str         = Form(...),
+    tipo:         str         = Form(...),
+    data_plantio: str         = Form(...),
+    foto:         UploadFile  = File(None),
+    torre:        Torre       = Depends(get_torre_do_usuario),
+    caso_de_uso:  CriarPlanta = Depends(get_criar_planta),
+):
+    nome_arquivo = foto.filename if foto else None
+    conteudo = await foto.read() if foto and foto.filename else None
+    return await caso_de_uso.executar(nome, tipo, data_plantio, nome_arquivo, conteudo, torre.id)
+
+
+@router.get("/{torre_id}/plantas/{planta_id}", response_model=PlantaResponse)
+def buscar_planta(
+    planta_id: int,
+    torre: Torre = Depends(get_torre_do_usuario),
+    caso_de_uso: BuscarPlanta = Depends(get_buscar_planta),
+):
+    return caso_de_uso.executar(planta_id, torre.id)
+
+
+@router.delete("/{torre_id}/plantas/{planta_id}", summary="Remove uma planta desta torre")
+def deletar_planta(
+    planta_id: int,
+    torre: Torre = Depends(get_torre_do_usuario),
+    caso_de_uso: DeletarPlanta = Depends(get_deletar_planta),
+):
+    nome = caso_de_uso.executar(planta_id, torre.id)
+    return {"sucesso": True, "mensagem": f"Planta '{nome}' removida com sucesso"}

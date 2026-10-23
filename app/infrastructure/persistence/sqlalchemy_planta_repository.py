@@ -11,11 +11,18 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
     def __init__(self, session: Session):
         self._session = session
 
-    def listar(self) -> List[Planta]:
-        return [self._para_entidade(m) for m in self._session.query(PlantaModel).all()]
+    def _da_torre(self, torre_id: Optional[str]):
+        consulta = self._session.query(PlantaModel)
+        if torre_id is None:
+            return consulta.filter(PlantaModel.torre_id.is_(None))
+        return consulta.filter(PlantaModel.torre_id == torre_id)
 
-    def buscar_por_id(self, planta_id: int) -> Optional[Planta]:
-        modelo = self._buscar_modelo(planta_id)
+    def listar(self, torre_id: Optional[str]) -> List[Planta]:
+        modelos = self._da_torre(torre_id).order_by(PlantaModel.id).all()
+        return [self._para_entidade(m) for m in modelos]
+
+    def buscar_por_id(self, planta_id: int, torre_id: Optional[str]) -> Optional[Planta]:
+        modelo = self._da_torre(torre_id).filter(PlantaModel.id == planta_id).first()
         return self._para_entidade(modelo) if modelo is not None else None
 
     def criar(self, planta: Planta) -> Planta:
@@ -24,6 +31,7 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
             tipo         = planta.tipo,
             data_plantio = planta.data_plantio,
             foto_url     = planta.foto_url,
+            torre_id     = planta.torre_id,
         )
         self._session.add(modelo)
         self._session.commit()
@@ -31,13 +39,10 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
         return self._para_entidade(modelo)
 
     def remover(self, planta_id: int) -> None:
-        modelo = self._buscar_modelo(planta_id)
+        modelo = self._session.get(PlantaModel, planta_id)
         if modelo is not None:
             self._session.delete(modelo)
             self._session.commit()
-
-    def _buscar_modelo(self, planta_id: int) -> Optional[PlantaModel]:
-        return self._session.query(PlantaModel).filter(PlantaModel.id == planta_id).first()
 
     @staticmethod
     def _para_entidade(modelo: PlantaModel) -> Planta:
@@ -47,4 +52,5 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
             tipo         = modelo.tipo,
             data_plantio = modelo.data_plantio,
             foto_url     = modelo.foto_url,
+            torre_id     = modelo.torre_id,
         )
