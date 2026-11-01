@@ -67,3 +67,6 @@ EXTENSOES_ACEITAS  = ["jpg", "jpeg", "png", "webp"]
 
 # ── Log ───────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+#REDIS
+REDIS_URL = os.getenv("REDIS_URL", "")

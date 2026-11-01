@@ -28,7 +28,7 @@ from app.application.use_cases.processar_status_motor import ProcessarStatusMoto
 from app.application.use_cases.sincronizar_torre import SincronizarTorre
 from app.application.use_cases.registrar_evento import RegistrarEvento
 from app.application.use_cases.registrar_interesse import RegistrarInteresse
-from app.core.config import JWT_SEGREDO, SERVICO_API_KEY
+from app.core.config import JWT_SEGREDO, REDIS_URL, SERVICO_API_KEY
 from app.domain.entities.torre import Torre
 from app.domain.exceptions import AcessoNegado, NaoAutenticado
 from app.domain.services.avaliador_alertas import AvaliadorDeAlertas
@@ -51,6 +51,7 @@ from app.infrastructure.persistence.sqlalchemy_torre_repository import (
     SqlAlchemyTorreRepository,
 )
 from app.infrastructure.state.estado_memoria import EstadoEmMemoria
+from app.infrastructure.state.estado_redis import EstadoRedis
 from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoStorage
 
 
@@ -65,6 +66,7 @@ class Container:
         self.publicador    = MqttPublicador(self.mqtt_client)
         self.catalogo      = CatalogoSqlAlchemy()
         self.historico     = HistoricoInflux()
+        self.estado        = EstadoRedis(REDIS_URL) if REDIS_URL else EstadoEmMemoria()
 
         self.validador_sessao = JwtValidador(JWT_SEGREDO)
 

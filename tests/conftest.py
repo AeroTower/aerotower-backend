@@ -8,7 +8,7 @@ _pasta = tempfile.mkdtemp()
 os.environ["DATABASE_URL"]  = f"sqlite:///{_pasta}/teste.db"
 os.environ["SERVICO_API_KEY"] = "servico-teste"
 os.environ["JWT_SEGREDO"]     = "segredo-de-teste"
-
+os.environ["REDIS_URL"]       = "" 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest  # noqa: E402

@@ -41,6 +41,9 @@ class EstadoEmMemoria(EstadoDeMonitoramento):
     def thresholds(self, torre_id: str) -> Thresholds:
         with self._lock:
             return self._thresholds[torre_id]
+    
+    def salvar_thresholds(self, torre_id: str, thresholds: Thresholds) -> None:
+        pass  
 
     def presenca(self, torre_id: str) -> Presenca:
         with self._lock:
