@@ -11,4 +11,5 @@ class AtualizarThresholds:
     def executar(self, torre_id: str, novos_valores: Dict[str, Any]) -> Thresholds:
         thresholds = self._estado.thresholds(torre_id)
         thresholds.aplicar(novos_valores)
+        self._estado.salvar_thresholds(torre_id, thresholds)
         return thresholds
