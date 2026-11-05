@@ -18,7 +18,6 @@ from app.presentation.routers import (
     geral,
     internal,
     motor,
-    plantas,
     sensores,
     thresholds,
     torres,
@@ -68,6 +67,5 @@ app.include_router(internal.router)
 app.include_router(sensores.router)
 app.include_router(thresholds.router)
 app.include_router(motor.router)
-app.include_router(plantas.router)
 app.include_router(eventos.router)
 app.include_router(websocket.router)

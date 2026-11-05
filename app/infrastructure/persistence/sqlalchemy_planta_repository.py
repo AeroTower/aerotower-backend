@@ -11,18 +11,18 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
     def __init__(self, session: Session):
         self._session = session
 
-    def _da_torre(self, torre_id: Optional[str]):
-        consulta = self._session.query(PlantaModel)
-        if torre_id is None:
-            return consulta.filter(PlantaModel.torre_id.is_(None))
-        return consulta.filter(PlantaModel.torre_id == torre_id)
+    def _de(self, torre_id: str, usuario_id: str):
+        return self._session.query(PlantaModel).filter(
+            PlantaModel.torre_id == torre_id,
+            PlantaModel.usuario_id == usuario_id,
+        )
 
-    def listar(self, torre_id: Optional[str]) -> List[Planta]:
-        modelos = self._da_torre(torre_id).order_by(PlantaModel.id).all()
+    def listar(self, torre_id: str, usuario_id: str) -> List[Planta]:
+        modelos = self._de(torre_id, usuario_id).order_by(PlantaModel.id).all()
         return [self._para_entidade(m) for m in modelos]
 
-    def buscar_por_id(self, planta_id: int, torre_id: Optional[str]) -> Optional[Planta]:
-        modelo = self._da_torre(torre_id).filter(PlantaModel.id == planta_id).first()
+    def buscar_por_id(self, planta_id: int, torre_id: str, usuario_id: str) -> Optional[Planta]:
+        modelo = self._de(torre_id, usuario_id).filter(PlantaModel.id == planta_id).first()
         return self._para_entidade(modelo) if modelo is not None else None
 
     def criar(self, planta: Planta) -> Planta:
@@ -32,6 +32,7 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
             data_plantio = planta.data_plantio,
             foto_url     = planta.foto_url,
             torre_id     = planta.torre_id,
+            usuario_id   = planta.usuario_id,
         )
         self._session.add(modelo)
         self._session.commit()
@@ -53,4 +54,5 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
             data_plantio = modelo.data_plantio,
             foto_url     = modelo.foto_url,
             torre_id     = modelo.torre_id,
+            usuario_id   = modelo.usuario_id,
         )
