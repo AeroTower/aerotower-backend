@@ -16,12 +16,12 @@ class SincronizarTorre:
         self._torres = torres
 
     def executar(self, torre_id: str, kit: Kit, dono_id: Optional[str],
-                 apelido: Optional[str], versao: int) -> bool:
+                 apelido: Optional[str], versao: int, forcar: bool = False) -> bool:
         torre_id = (torre_id or "").upper()
         if not id_de_torre_valido(torre_id):
             raise IdDeTorreInvalido(torre_id)
         aplicado = self._torres.aplicar_estado(
-            Torre(id=torre_id, kit=kit, dono_id=dono_id, apelido=apelido), versao
+            Torre(id=torre_id, kit=kit, dono_id=dono_id, apelido=apelido), versao, forcar
         )
         logger.info("Torre %s %s (v%s, dono=%s)", torre_id,
                     "sincronizada" if aplicado else "ignorada: evento antigo", versao, dono_id)

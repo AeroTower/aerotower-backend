@@ -26,9 +26,9 @@ class SqlAlchemyTorreRepository(TorreRepository):
         )
         return [self._para_entidade(m) for m in modelos]
 
-    def aplicar_estado(self, torre: Torre, versao: int) -> bool:
+    def aplicar_estado(self, torre: Torre, versao: int, forcar: bool = False) -> bool:
         modelo = self._session.get(TorreModel, torre.id)
-        if modelo is not None and modelo.versao >= versao:
+        if modelo is not None and modelo.versao >= versao and not forcar:
             return False
         if modelo is None:
             modelo = TorreModel(id=torre.id, criada_em=datetime.now())
