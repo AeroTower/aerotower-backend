@@ -9,6 +9,7 @@ class Planta:
     data_plantio: str
     foto_url: Optional[str] = None
     id: Optional[int] = None
-    # Torre dona da planta. None = planta antiga, de antes de existirem
-    # varias torres (so aparece nas rotas legadas /plantas).
+    # A planta e de uma pessoa NUMA torre: se a torre muda de dono, quem
+    # chega nao ve as plantas de quem saiu.
     torre_id: Optional[str] = None
+    usuario_id: Optional[str] = None

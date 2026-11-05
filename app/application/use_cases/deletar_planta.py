@@ -1,6 +1,4 @@
 import logging
-from typing import Optional
-
 from app.application.ports.armazenamento_fotos import ArmazenamentoDeFotos
 from app.domain.exceptions import PlantaNaoEncontrada
 from app.domain.repositories.planta_repository import PlantaRepository
@@ -13,9 +11,9 @@ class DeletarPlanta:
         self._repositorio = repositorio
         self._armazenamento = armazenamento
 
-    def executar(self, planta_id: int, torre_id: Optional[str] = None) -> str:
-        # Planta de outra torre = nao encontrada (mesma regra das torres).
-        planta = self._repositorio.buscar_por_id(planta_id, torre_id)
+    def executar(self, planta_id: int, torre_id: str, usuario_id: str) -> str:
+        # Planta de outra torre ou de outra pessoa = nao encontrada.
+        planta = self._repositorio.buscar_por_id(planta_id, torre_id, usuario_id)
         if planta is None:
             raise PlantaNaoEncontrada(planta_id)
 

@@ -85,11 +85,16 @@ algumas vezes antes de desistir.
 A tabela `torres` é criada sozinha no primeiro start. Banco novo? Chame
 `POST /admin/sincronizar` no serviço de auth para reenviar todas.
 
+## Plantas
+
+Cada planta é de uma pessoa **numa** torre (`torre_id` + `usuario_id`), só
+pelas rotas `/torres/{id}/plantas`. Se a torre muda de dono, quem chega não vê
+as plantas de quem saiu; se o dono antigo voltar, as dele continuam lá. A
+rota antiga `/plantas` (sem login) saiu. As colunas novas são criadas pela
+`migracoes.py` no start.
+
 ## O que ainda não escala (próximos passos)
 
-- **Plantas** continuam globais. Falta `torre_id` na tabela `plantas`
-  (precisa de migração; o `create_all` não altera tabela existente).
-- **Thresholds e última leitura** ficam em memória, por torre.
 - **Um processo só.** O consumidor MQTT vive dentro da API (ver `startup.sh`).
 - **Credencial MQTT por torre** (HiveMQ Starter, regra
   `aerotower/${mqtt-username}/#`). O worker do auth é o lugar natural para

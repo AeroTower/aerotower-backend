@@ -119,14 +119,14 @@ def status_motor(torre: Torre = Depends(get_torre_do_usuario)):
     return {**status.bruto, "recebidoEm": status.recebido_em.isoformat()}
 
 
-# ── Plantas (cada torre tem as suas) ─────
+# ── Plantas (de cada pessoa, em cada torre) ─────
 
 @router.get("/{torre_id}/plantas", response_model=List[PlantaResponse], summary="Plantas desta torre")
 def listar_plantas(
     torre: Torre = Depends(get_torre_do_usuario),
     caso_de_uso: ListarPlantas = Depends(get_listar_plantas),
 ):
-    return caso_de_uso.executar(torre.id)
+    return caso_de_uso.executar(torre.id, torre.dono_id)
 
 
 @router.post("/{torre_id}/plantas", response_model=PlantaResponse, status_code=201,
@@ -141,7 +141,8 @@ async def criar_planta(
 ):
     nome_arquivo = foto.filename if foto else None
     conteudo = await foto.read() if foto and foto.filename else None
-    return await caso_de_uso.executar(nome, tipo, data_plantio, nome_arquivo, conteudo, torre.id)
+    return await caso_de_uso.executar(nome, tipo, data_plantio, nome_arquivo, conteudo,
+                                      torre.id, torre.dono_id)
 
 
 @router.get("/{torre_id}/plantas/{planta_id}", response_model=PlantaResponse)
@@ -150,7 +151,7 @@ def buscar_planta(
     torre: Torre = Depends(get_torre_do_usuario),
     caso_de_uso: BuscarPlanta = Depends(get_buscar_planta),
 ):
-    return caso_de_uso.executar(planta_id, torre.id)
+    return caso_de_uso.executar(planta_id, torre.id, torre.dono_id)
 
 
 @router.delete("/{torre_id}/plantas/{planta_id}", summary="Remove uma planta desta torre")
@@ -159,5 +160,5 @@ def deletar_planta(
     torre: Torre = Depends(get_torre_do_usuario),
     caso_de_uso: DeletarPlanta = Depends(get_deletar_planta),
 ):
-    nome = caso_de_uso.executar(planta_id, torre.id)
+    nome = caso_de_uso.executar(planta_id, torre.id, torre.dono_id)
     return {"sucesso": True, "mensagem": f"Planta '{nome}' removida com sucesso"}

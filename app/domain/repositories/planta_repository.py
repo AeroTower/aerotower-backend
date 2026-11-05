@@ -5,14 +5,14 @@ from app.domain.entities.planta import Planta
 
 
 class PlantaRepository(ABC):
-    """Plantas sempre filtradas por torre: torre_id None = plantas legadas."""
+    """Plantas sempre filtradas por torre E por usuario (o dono atual)."""
 
     @abstractmethod
-    def listar(self, torre_id: Optional[str]) -> List[Planta]:
+    def listar(self, torre_id: str, usuario_id: str) -> List[Planta]:
         ...
 
     @abstractmethod
-    def buscar_por_id(self, planta_id: int, torre_id: Optional[str]) -> Optional[Planta]:
+    def buscar_por_id(self, planta_id: int, torre_id: str, usuario_id: str) -> Optional[Planta]:
         ...
 
     @abstractmethod

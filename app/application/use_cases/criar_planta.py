@@ -22,6 +22,7 @@ class CriarPlanta:
         nome_arquivo_foto: Optional[str] = None,
         conteudo_foto: Optional[bytes] = None,
         torre_id: Optional[str] = None,
+        usuario_id: Optional[str] = None,
     ) -> Planta:
         foto_url = None
         if nome_arquivo_foto and conteudo_foto is not None:
@@ -33,7 +34,7 @@ class CriarPlanta:
 
         planta = self._repositorio.criar(
             Planta(nome=nome, tipo=tipo, data_plantio=data_plantio, foto_url=foto_url,
-                   torre_id=torre_id)
+                   torre_id=torre_id, usuario_id=usuario_id)
         )
         logger.info("Planta cadastrada: %s (%s) na torre %s", planta.nome, planta.tipo, torre_id)
         return planta

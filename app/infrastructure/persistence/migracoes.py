@@ -9,11 +9,14 @@ import logging
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
+from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoStorage
+
 logger = logging.getLogger(__name__)
 
 
 def aplicar(engine: Engine) -> None:
     _coluna_torre_em_plantas(engine)
+    _coluna_usuario_em_plantas(engine)
 
 
 def _coluna_torre_em_plantas(engine: Engine) -> None:
@@ -27,3 +30,27 @@ def _coluna_torre_em_plantas(engine: Engine) -> None:
         conexao.execute(text("ALTER TABLE plantas ADD COLUMN torre_id VARCHAR"))
         conexao.execute(text("CREATE INDEX IF NOT EXISTS ix_plantas_torre_id ON plantas (torre_id)"))
     logger.info("Migração: coluna plantas.torre_id criada (plantas antigas ficam sem torre).")
+
+
+def _coluna_usuario_em_plantas(engine: Engine) -> None:
+    """Plantas passam a ser de cada pessoa.
+
+    Todas as plantas de antes desta coluna sao de teste (legadas, sem torre,
+    ou cadastradas durante os testes das torres, sem dono). Sao apagadas uma
+    unica vez, junto com as fotos, quando a coluna e criada.
+    """
+    inspetor = inspect(engine)
+    if "plantas" not in inspetor.get_table_names():
+        return
+    if "usuario_id" in {c["name"] for c in inspetor.get_columns("plantas")}:
+        return
+    fotos = FilesystemFotoStorage()
+    with engine.begin() as conexao:
+        apagadas = 0
+        for (foto_url,) in conexao.execute(text("SELECT foto_url FROM plantas")):
+            fotos.remover(foto_url)
+            apagadas += 1
+        conexao.execute(text("DELETE FROM plantas"))
+        conexao.execute(text("ALTER TABLE plantas ADD COLUMN usuario_id VARCHAR"))
+        conexao.execute(text("CREATE INDEX IF NOT EXISTS ix_plantas_usuario_id ON plantas (usuario_id)"))
+    logger.info("Migração: coluna plantas.usuario_id criada; %d planta(s) de teste apagada(s).", apagadas)

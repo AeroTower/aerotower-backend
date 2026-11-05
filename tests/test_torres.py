@@ -165,11 +165,33 @@ def test_plantas_sao_de_cada_torre(app_e_mqtt):
     assert cliente.delete(f"/torres/{t2}/plantas/{planta_id}", headers=joao).status_code == 404
     assert cliente.delete(f"/torres/{t1}/plantas/{planta_id}", headers=joao).status_code == 404
 
-    # As rotas legadas não enxergam plantas de torre
-    assert all(p["id"] != planta_id for p in cliente.get("/plantas").json())
-
     assert cliente.delete(f"/torres/{t1}/plantas/{planta_id}", headers=maria).status_code == 200
     assert cliente.get(f"/torres/{t1}/plantas", headers=maria).json() == []
+
+
+def test_plantas_sao_de_cada_pessoa(app_e_mqtt):
+    """Torre passada adiante: quem chega não vê as plantas de quem saiu."""
+    cliente, _, _ = app_e_mqtt
+    torre = _id_torre()
+    _sincronizar(cliente, torre, dono="maria", versao=2)
+    maria, joao = _h("maria"), _h("joao")
+    r = cliente.post(f"/torres/{torre}/plantas", headers=maria,
+                     data={"nome": "Tomate", "tipo": "fruto", "data_plantio": "2026-11-01"})
+    planta_id = r.json()["id"]
+
+    _sincronizar(cliente, torre, dono=None, versao=3)        # torre.desvinculada
+    _sincronizar(cliente, torre, dono="joao", versao=4)      # torre.vinculada
+    assert cliente.get(f"/torres/{torre}/plantas", headers=joao).json() == []
+    assert cliente.get(f"/torres/{torre}/plantas/{planta_id}", headers=joao).status_code == 404
+    assert cliente.delete(f"/torres/{torre}/plantas/{planta_id}", headers=joao).status_code == 404
+
+    _sincronizar(cliente, torre, dono="maria", versao=5)     # Maria volta: as dela continuam lá
+    assert [p["nome"] for p in cliente.get(f"/torres/{torre}/plantas", headers=maria).json()] == ["Tomate"]
+
+
+def test_rota_antiga_de_plantas_saiu(app_e_mqtt):
+    cliente, _, _ = app_e_mqtt
+    assert cliente.get("/plantas").status_code == 404
 
 
 def test_migracao_adiciona_torre_id_em_tabela_antiga(tmp_path):
@@ -183,6 +205,30 @@ def test_migracao_adiciona_torre_id_em_tabela_antiga(tmp_path):
         c.execute(text("INSERT INTO plantas (nome, tipo, data_plantio) VALUES ('Velha', 'x', '2026-05-01')"))
     migracoes.aplicar(engine)
     migracoes.aplicar(engine)   # segunda vez não faz nada
-    assert "torre_id" in {col["name"] for col in inspect(engine).get_columns("plantas")}
+    colunas = {col["name"] for col in inspect(engine).get_columns("plantas")}
+    assert {"torre_id", "usuario_id"} <= colunas
+    with engine.begin() as c:   # plantas de teste (sem dono) foram apagadas
+        assert c.execute(text("SELECT COUNT(*) FROM plantas")).scalar() == 0
+
+
+def test_migracao_apaga_plantas_de_teste_uma_vez(tmp_path, monkeypatch):
+    from sqlalchemy import create_engine, text
+    from app.infrastructure.persistence import migracoes
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "static" / "fotos").mkdir(parents=True)
+    (tmp_path / "static" / "fotos" / "teste.jpg").write_bytes(b"x")
+    engine = create_engine(f"sqlite:///{tmp_path}/parcial.db")
     with engine.begin() as c:
-        assert c.execute(text("SELECT torre_id FROM plantas")).scalar() is None
+        c.execute(text("CREATE TABLE plantas (id INTEGER PRIMARY KEY, nome VARCHAR, tipo VARCHAR, "
+                       "data_plantio VARCHAR, foto_url VARCHAR, torre_id VARCHAR)"))
+        c.execute(text("INSERT INTO plantas (nome, tipo, data_plantio, foto_url, torre_id) "
+                       "VALUES ('Teste', 'x', '2026-10-30', '/static/fotos/teste.jpg', 'AT-SIMULADA01')"))
+    migracoes.aplicar(engine)
+    assert not (tmp_path / "static" / "fotos" / "teste.jpg").exists()
+    with engine.begin() as c:
+        c.execute(text("INSERT INTO plantas (nome, tipo, data_plantio, torre_id, usuario_id) "
+                       "VALUES ('Real', 'x', '2026-11-05', 'AT-SIMULADA01', 'maria')"))
+    migracoes.aplicar(engine)   # já migrado: não apaga mais nada
+    with engine.begin() as c:
+        assert c.execute(text("SELECT nome FROM plantas")).scalars().all() == ["Real"]
