@@ -22,11 +22,16 @@ class EstadoTorre(BaseModel):
     donoId:  Optional[str] = None
     apelido: Optional[str] = Field(None, max_length=40)
     versao:  int = Field(..., ge=1)
+    # Reenvio manual do admin (POST /admin/sincronizar no auth): o auth e a
+    # fonte da verdade, entao aplica mesmo com versao menor. Conserta o
+    # Backend que guardou versoes de um banco do auth que foi recriado.
+    forcar:  bool = False
 
 
 @router.put("/torres/{torre_id}", summary="Estado de uma torre vindo do serviço de auth")
 def sincronizar(torre_id: str, body: EstadoTorre,
                 caso_de_uso: SincronizarTorre = Depends(get_sincronizar_torre)):
-    aplicado = caso_de_uso.executar(torre_id, body.kit, body.donoId, body.apelido, body.versao)
+    aplicado = caso_de_uso.executar(torre_id, body.kit, body.donoId, body.apelido, body.versao,
+                                    forcar=body.forcar)
     container.catalogo.esquecer(torre_id.upper())
     return {"torreId": torre_id.upper(), "aplicado": aplicado}

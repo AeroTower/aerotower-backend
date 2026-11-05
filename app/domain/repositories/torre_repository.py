@@ -17,7 +17,7 @@ class TorreRepository(ABC):
         ...
 
     @abstractmethod
-    def aplicar_estado(self, torre: Torre, versao: int) -> bool:
+    def aplicar_estado(self, torre: Torre, versao: int, forcar: bool = False) -> bool:
         """Grava o estado se `versao` for mais nova que a guardada.
 
         Devolve False quando o evento e velho (chegou fora de ordem ou

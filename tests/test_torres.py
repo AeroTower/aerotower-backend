@@ -25,9 +25,10 @@ def _id_torre():
     return "AT-" + uuid.uuid4().hex[:12].upper()
 
 
-def _sincronizar(cliente, torre_id, kit="pro", dono=None, versao=1, apelido=None):
+def _sincronizar(cliente, torre_id, kit="pro", dono=None, versao=1, apelido=None, forcar=False):
     r = cliente.put(f"/internal/torres/{torre_id}", headers=SERVICO,
-                    json={"kit": kit, "donoId": dono, "apelido": apelido, "versao": versao})
+                    json={"kit": kit, "donoId": dono, "apelido": apelido, "versao": versao,
+                          "forcar": forcar})
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -232,3 +233,17 @@ def test_migracao_apaga_plantas_de_teste_uma_vez(tmp_path, monkeypatch):
     migracoes.aplicar(engine)   # já migrado: não apaga mais nada
     with engine.begin() as c:
         assert c.execute(text("SELECT nome FROM plantas")).scalars().all() == ["Real"]
+
+
+def test_sincronizar_do_admin_vale_mesmo_com_versao_menor(app_e_mqtt):
+    """Banco do auth recriado: versões recomeçam e o Backend ignorava tudo."""
+    cliente, _, _ = app_e_mqtt
+    torre = _id_torre()
+    _sincronizar(cliente, torre, dono="carla", versao=5)              # do banco antigo do auth
+    assert _sincronizar(cliente, torre, dono=None, versao=3)["aplicado"] is False   # evento comum
+    assert [t["id"] for t in cliente.get("/torres", headers=_h("carla")).json()] == [torre]
+
+    assert _sincronizar(cliente, torre, dono=None, versao=3, forcar=True)["aplicado"] is True
+    assert cliente.get("/torres", headers=_h("carla")).json() == []
+    # dali em diante a versão do auth volta a mandar
+    assert _sincronizar(cliente, torre, dono="joao", versao=4)["aplicado"] is True
