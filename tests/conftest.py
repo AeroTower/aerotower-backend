@@ -47,3 +47,23 @@ class MensagemMqtt:
     def __init__(self, topico, payload: bytes):
         self.topic = topico
         self.payload = payload
+
+
+# ── Tipo de cada teste, pela pasta ──────────────────────────────
+# `pytest -m seguranca` roda so os de seguranca; no PyCharm, o mesmo
+# filtro vai em Run Configuration > Additional Arguments.
+_TIPO_POR_PASTA = {
+    "unitarios":  "unitario",
+    "integracao": "integracao",
+    "funcionais": "funcional",
+    "aceitacao":  "aceitacao",
+    "desempenho": "desempenho",
+    "seguranca":  "seguranca",
+}
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        tipo = _TIPO_POR_PASTA.get(Path(str(item.fspath)).parent.name)
+        if tipo:
+            item.add_marker(getattr(pytest.mark, tipo))
