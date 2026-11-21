@@ -1,0 +1,13 @@
+# Cobertura medida por `pytest --cov` (ver TESTES.md).
+[run]
+source = .
+omit =
+    tests/*
+    antenv/*
+    .venv/*
+    venv/*
+
+[report]
+show_missing = true
+skip_empty = true
+fail_under = 90

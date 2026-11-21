@@ -23,3 +23,11 @@ static/fotos/*
 
 # Variaveis locais (credenciais) — o .env.example fica, o .env nao
 .env
+
+# Testes
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+relatorio-testes.xml
+.pytest_cache/
