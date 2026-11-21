@@ -6,7 +6,7 @@ from app.domain.entities.kit import Kit, capacidades_do_kit, filtrar_por_capacid
 from app.domain.entities.leitura import ComandoMotor, LeituraSensores
 from app.domain.entities.thresholds import Thresholds
 from app.domain.entities.torre import Torre, id_de_torre_valido
-from app.domain.services.avaliador_alertas import AvaliadorDeAlertas
+from app.domain.services.avaliador_alertas import ACIMA, REGRAS, AvaliadorDeAlertas, RegraDeAlerta
 from app.domain.services.validador_evento import ValidadorDeEvento
 
 
@@ -88,6 +88,26 @@ def test_valor_no_limite_exato_nao_e_alerta():
     bruto = {"ph": t.ph_min, "nivelAgua": t.nivel_agua_min}
     assert AvaliadorDeAlertas().avaliar(LeituraSensores(bruto=bruto), t) == []
 
+
+
+def test_mensagem_do_alerta_mantem_o_formato_antigo():
+    # A refatoracao trocou os if por uma tabela; o texto que o app mostra nao muda.
+    alertas = AvaliadorDeAlertas().avaliar(
+        LeituraSensores(bruto={"ph": 4.5, "temperaturaAgua": 31.5}), Thresholds())
+    assert alertas == ["pH abaixo do limite: 4.5", "Temperatura da água alta: 31.5°C"]
+
+
+def test_cada_regra_aponta_para_campos_que_existem():
+    leitura, limites = LeituraSensores(bruto={}), Thresholds()
+    for regra in REGRAS:
+        assert hasattr(leitura, regra.campo), regra.campo
+        assert hasattr(limites, regra.limite), regra.limite
+
+
+def test_regra_nova_entra_sem_mudar_o_avaliador():
+    regra = RegraDeAlerta("ph", "ph_max", ACIMA, "pH alto demais: {valor}")
+    alertas = AvaliadorDeAlertas(regras=[regra]).avaliar(LeituraSensores(bruto={"ph": 9}), Thresholds())
+    assert alertas == ["pH alto demais: 9"]
 
 # ── Kit e torre ──────────────────────────────────────────────
 

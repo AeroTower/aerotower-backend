@@ -24,6 +24,11 @@ jobs:
       - name: Dependencias
         run: pip install -r requirements.txt -r requirements-dev.txt
 
+      # Analise estatica (regras em ruff.toml): import sem uso, raise sem
+      # "from", complexidade ciclomatica > 10...
+      - name: Analise estatica (ruff)
+        run: ruff check --output-format=github .
+
       - name: Testes e cobertura
         run: >
           pytest --cov --cov-report=term-missing --cov-report=xml --cov-report=html

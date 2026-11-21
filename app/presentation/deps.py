@@ -58,7 +58,6 @@ from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoSto
 class Container:
     def __init__(self):
         self.mqtt_client   = criar_cliente()
-        self.estado        = EstadoEmMemoria()
         self.notificador   = WebSocketNotificador()
         self.armazenamento = FilesystemFotoStorage()
         self.avaliador     = AvaliadorDeAlertas()
@@ -66,6 +65,9 @@ class Container:
         self.publicador    = MqttPublicador(self.mqtt_client)
         self.catalogo      = CatalogoSqlAlchemy()
         self.historico     = HistoricoInflux()
+        # Redis quando configurado (varias instancias); senao, memoria local.
+        # Antes havia uma primeira atribuicao a EstadoEmMemoria() que era
+        # descartada logo abaixo.
         self.estado        = EstadoRedis(REDIS_URL) if REDIS_URL else EstadoEmMemoria()
 
         self.validador_sessao = JwtValidador(JWT_SEGREDO)

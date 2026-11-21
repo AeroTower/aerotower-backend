@@ -32,7 +32,7 @@ class EstadoDeMonitoramento(ABC):
     @abstractmethod
     def salvar_thresholds(self, torre_id: str, thresholds: Thresholds) -> None:
         ...
-    
+
     @abstractmethod
     def presenca(self, torre_id: str) -> Presenca:
         ...

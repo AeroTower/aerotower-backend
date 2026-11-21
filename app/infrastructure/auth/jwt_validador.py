@@ -26,8 +26,8 @@ class JwtValidador(ValidadorDeSessao):
                 issuer=EMISSOR, audience=AUDIENCIA,
                 options={"require": ["sub", "exp", "iss", "aud"]},
             )
-        except jwt.ExpiredSignatureError:
-            raise NaoAutenticado("Sessão expirada. Faça login de novo.")
-        except jwt.PyJWTError:
-            raise NaoAutenticado("Sessão inválida. Faça login de novo.")
+        except jwt.ExpiredSignatureError as erro:
+            raise NaoAutenticado("Sessão expirada. Faça login de novo.") from erro
+        except jwt.PyJWTError as erro:
+            raise NaoAutenticado("Sessão inválida. Faça login de novo.") from erro
         return dados["sub"]

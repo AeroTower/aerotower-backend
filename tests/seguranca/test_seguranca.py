@@ -15,7 +15,8 @@ from tests.apoio import SERVICO, cabecalho, id_torre, publicar, token, torre_de
 
 def _sem_assinatura(dados):
     """JWT com alg "none": o truque classico para pular a assinatura."""
-    parte = lambda d: base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
+    def parte(d):
+        return base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
     return f"{parte({'alg': 'none', 'typ': 'JWT'})}.{parte(dados)}."
 
 
@@ -73,9 +74,8 @@ def test_id_de_torre_malicioso_na_rota_interna(app_e_mqtt):
 
 def test_websocket_com_token_invalido_e_fechado(app_e_mqtt):
     cliente, _, _ = app_e_mqtt
-    with pytest.raises(WebSocketDisconnect) as erro:
-        with cliente.websocket_connect("/ws/sensores?token=falso") as ws:
-            ws.receive_json()
+    with pytest.raises(WebSocketDisconnect) as erro, cliente.websocket_connect("/ws/sensores?token=falso") as ws:
+        ws.receive_json()
     assert erro.value.code == 1008
 
 
