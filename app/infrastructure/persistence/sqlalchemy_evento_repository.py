@@ -1,7 +1,6 @@
 from typing import List
 
 from sqlalchemy import distinct, func
-from sqlalchemy.orm import Session
 
 from app.domain.entities.evento import (
     ContagemEvento,
@@ -11,34 +10,26 @@ from app.domain.entities.evento import (
 )
 from app.domain.repositories.evento_repository import EventoRepository
 from app.infrastructure.persistence.models import EventoModel, InteresseModel
+from app.infrastructure.persistence.repositorio_base import RepositorioSqlAlchemy
 
 
-class SqlAlchemyEventoRepository(EventoRepository):
-    def __init__(self, session: Session):
-        self._session = session
-
+class SqlAlchemyEventoRepository(RepositorioSqlAlchemy, EventoRepository):
     def registrar_evento(self, evento: Evento) -> Evento:
-        modelo = EventoModel(
+        modelo = self._salvar(EventoModel(
             nome      = evento.nome,
             pagina    = evento.pagina,
             sessao    = evento.sessao,
             criado_em = evento.criado_em,
-        )
-        self._session.add(modelo)
-        self._session.commit()
-        self._session.refresh(modelo)
+        ))
         return self._evento(modelo)
 
     def registrar_interesse(self, interesse: Interesse) -> Interesse:
-        modelo = InteresseModel(
+        modelo = self._salvar(InteresseModel(
             email     = interesse.email,
             produto   = interesse.produto,
             sessao    = interesse.sessao,
             criado_em = interesse.criado_em,
-        )
-        self._session.add(modelo)
-        self._session.commit()
-        self._session.refresh(modelo)
+        ))
         return self._interesse(modelo)
 
     def resumo(self) -> ResumoValidacao:

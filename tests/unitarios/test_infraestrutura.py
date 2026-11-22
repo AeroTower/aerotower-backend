@@ -382,14 +382,19 @@ def test_modulos_antigos_da_raiz_reexportam_os_novos():
 
 
 def test_influx_configurado_cria_o_cliente(monkeypatch):
+    from app.core import config
     from app.infrastructure.persistence import influx
     for nome, valor in {"INFLUX_URL": "http://influx:8086", "INFLUX_TOKEN": "t",
                         "INFLUX_ORG": "o", "INFLUX_BUCKET": "b"}.items():
         monkeypatch.setenv(nome, valor)
     try:
+        # As variaveis do Influx agora sao lidas no config.py: recarrega ele
+        # primeiro, senao o influx.py continua vendo os valores antigos.
+        importlib.reload(config)
         assert importlib.reload(influx).client is not None
     finally:
         monkeypatch.undo()
+        importlib.reload(config)
         importlib.reload(influx)
     assert influx.client is None
 
