@@ -79,3 +79,17 @@ def test_consulta_recente_usa_bucket_e_intervalo(influx_falso):
     assert 'from(bucket: "leituras")' in query
     assert "range(start: -6h)" in query
     assert 'r._measurement == "sensor_reading"' in query
+
+
+@pytest.mark.parametrize("invalido", [0, -1, "1); drop()", 1.5, True])
+def test_consulta_recusa_intervalo_invalido(influx_falso, invalido):
+    """Refatoracao: so inteiro positivo entra no texto da query."""
+    with pytest.raises(ValueError):
+        influx.get_recent_readings(hours=invalido)
+    influx.query_api.query.assert_not_called()
+
+
+def test_montar_ponto_sem_gravar():
+    linha = influx.montar_ponto({"ph": 6.0, "status": "ok"}, device="AT-AAAA1111").to_line_protocol()
+    assert linha.startswith("sensor_reading,device=AT-AAAA1111 ph=6")
+    assert "status" not in linha

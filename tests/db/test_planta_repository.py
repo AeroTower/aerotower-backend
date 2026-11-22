@@ -112,3 +112,13 @@ def test_remover_nao_afeta_as_outras_plantas(session):
     repo.remover(a.id)
 
     assert [p.nome for p in repo.listar(TORRE, CAIO)] == ["B"]
+
+
+def test_sessao_continua_utilizavel_depois_de_erro(session):
+    """Refatoracao: _commit() faz rollback quando o commit falha. Sem isso,
+    a sessao ficava travada e ate uma consulta simples dava erro."""
+    repo = SqlAlchemyPlantaRepository(session)
+    with pytest.raises(IntegrityError):
+        repo.criar(Planta(nome=None, tipo="folhosa", data_plantio="2026-10-01"))
+
+    assert repo.criar(_planta("Depois do erro")).id is not None

@@ -127,3 +127,16 @@ def test_redis_fora_do_ar_falha_na_criacao():
     quebrar so na primeira leitura do sensor."""
     with pytest.raises(redis.exceptions.ConnectionError):
         EstadoRedis("redis://localhost:1")   # porta sem servidor
+
+
+def test_salvar_thresholds_novos_atualiza_o_cache(conexao):
+    """Refatoracao: antes, salvar um objeto Thresholds novo gravava no Redis
+    mas os alertas continuavam usando o antigo (cache) ate o restart."""
+    from app.domain.entities.thresholds import Thresholds
+    novo, _ = conexao
+    estado = novo()
+    estado.thresholds(TORRE)                 # carrega o padrao no cache
+
+    estado.salvar_thresholds(TORRE, Thresholds(ph_min=5.0, ph_max=7.0))
+
+    assert estado.thresholds(TORRE).ph_max == 7.0
