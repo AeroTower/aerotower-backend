@@ -4,3 +4,4 @@ pytest
 httpx
 fakeredis
 pytest-bdd
+pytest-cov
