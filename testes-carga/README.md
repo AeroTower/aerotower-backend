@@ -11,6 +11,10 @@ Simula **painéis do app abertos**: cada usuário virtual faz o que o app faz
 No fim, o terminal imprime um bloco `CT-DESEMP-02` com **APROVADO** ou
 **REPROVADO**. É esse bloco que vai para o relatório.
 
+Requisito: **Python 3.11 ou mais novo** (o Locust 2.47 não instala em versões
+anteriores). No macOS, o `python3` do sistema costuma ser o 3.9: veja o
+passo a passo do Mac no fim deste arquivo.
+
 ## Passo a passo (Windows, PowerShell)
 
 **1. Marque o horário com o grupo.** Durante os 8 minutos o app e o auth
@@ -38,8 +42,11 @@ pip install locust
   ```
 
 **4. Abra o painel de métricas da Azure** (para o print do servidor):
-portal.azure.com › `aerotower-backend` › **Métricas** › adicione
-*CPU Percentage*, *Http 5xx* e *Response Time*, intervalo "Últimos 30 minutos".
+portal.azure.com › `aerotower-backend` › **Métricas** › adicione *Requests*,
+*Http 5xx* e *Response Time*, intervalo "Últimos 30 minutos". A CPU fica no
+plano: `ASP-hidroponia-abf3` › **Métricas** › *CPU Percentage*. (Com o portal
+em português os nomes aparecem traduzidos: Solicitações, Erros do servidor
+HTTP, Tempo de resposta, Porcentagem de CPU.)
 
 **5. Rode a carga** (4 min):
 ```powershell
@@ -61,3 +68,36 @@ locust -f testes-carga\locustfile.py --headless --html pico.html --csv pico
 
 Quer ver os gráficos ao vivo? Rode sem `--headless` e abra
 http://localhost:8089. O cenário começa sozinho quando você clica em *Start*.
+
+## Passo a passo (macOS, Terminal)
+
+1. Abra o **Terminal** (⌘ + Espaço, digite "Terminal").
+2. Confira o Python: `python3 --version`. Se for **3.11 ou mais novo**, siga.
+   Se for 3.9 (ou o Mac pedir para instalar as "ferramentas de linha de
+   comando"), instale o Python 3.13 em python.org/downloads (*macOS 64-bit
+   universal2 installer*) e use `python3.13` nos comandos abaixo.
+3. Pasta, arquivo e Locust:
+   ```bash
+   mkdir -p ~/aerotower-carga && cd ~/aerotower-carga
+   curl -LO https://raw.githubusercontent.com/AeroTower/aerotower-backend/testes-individuais/testes-carga/locustfile.py
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install locust
+   locust --version
+   ```
+4. Conta e torre: o mesmo passo 3 do Windows, mas com `export`:
+   ```bash
+   export AEROTOWER_TOKEN="eyJ...cole aqui..."
+   export AEROTOWER_TORRE="AT-XXXXXXXXXXXX"
+   ```
+   (No Chrome do Mac, as ferramentas abrem com ⌘ + ⌥ + I.)
+5. Ensaio de 40 s, para conferir que tudo está certo:
+   `CENARIO=ensaio locust -f locustfile.py --headless --only-summary`
+6. Carga e pico (4 min cada):
+   ```bash
+   CENARIO=carga locust -f locustfile.py --headless --html carga.html --csv carga
+   CENARIO=pico  locust -f locustfile.py --headless --html pico.html  --csv pico
+   open carga.html pico.html
+   ```
+   Print de uma área da tela: ⌘ + ⇧ + 4. Num terminal novo, rode antes
+   `cd ~/aerotower-carga && source .venv/bin/activate` (e os `export`).
