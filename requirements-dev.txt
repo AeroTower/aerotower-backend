@@ -1,7 +1,8 @@
-# Ferramentas de teste (nao vao para a Azure).
-# pip install -r requirements.txt -r requirements-dev.txt
-pytest==9.2.0
-pytest-cov==7.1.0
-pytest-bdd==9.0.1
-httpx==0.28.1
+# Dependencias so para rodar os testes (nao vao para producao)
+-r requirements.txt
+pytest
+httpx
+fakeredis
+pytest-bdd
+pytest-cov
 ruff==0.17.6

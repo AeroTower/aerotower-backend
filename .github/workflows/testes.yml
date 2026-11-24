@@ -29,10 +29,23 @@ jobs:
       - name: Analise estatica (ruff)
         run: ruff check --output-format=github .
 
+      # Os testes marcados como "defeito" ficam fora deste passo: eles
+      # reproduzem defeitos ainda abertos e falham de proposito.
       - name: Testes e cobertura
         run: >
-          pytest --cov --cov-report=term-missing --cov-report=xml --cov-report=html
+          pytest -m "not defeito" --cov --cov-report=term-missing --cov-report=xml --cov-report=html
           --junitxml=relatorio-testes.xml
+
+      # Testes individuais que acham defeitos (fichas no TESTES.md). Espera-se
+      # que FALHEM enquanto o defeito existir: o passo aparece em vermelho, mas
+      # nao derruba o job nem o deploy. O log e o resumo servem de evidencia.
+      - name: Testes que acham defeitos (falham de proposito)
+        continue-on-error: true
+        run: pytest -m defeito -v --no-cov -p no:cacheprovider --junitxml=relatorio-defeitos.xml
+
+      - name: Resumo dos defeitos encontrados
+        if: always()
+        run: python .github/resumo_defeitos.py relatorio-defeitos.xml >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resumo por tipo de teste
         if: always()
@@ -46,4 +59,5 @@ jobs:
           path: |
             htmlcov/
             relatorio-testes.xml
+            relatorio-defeitos.xml
             coverage.xml

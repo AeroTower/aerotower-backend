@@ -43,7 +43,10 @@ class EstadoEmMemoria(EstadoDeMonitoramento):
             return self._thresholds[torre_id]
 
     def salvar_thresholds(self, torre_id: str, thresholds: Thresholds) -> None:
-        pass
+        # Guarda o objeto recebido (antes era `pass`: so funcionava se quem
+        # chamasse tivesse alterado o MESMO objeto devolvido por thresholds()).
+        with self._lock:
+            self._thresholds[torre_id] = thresholds
 
     def presenca(self, torre_id: str) -> Presenca:
         with self._lock:

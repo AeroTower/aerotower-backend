@@ -31,3 +31,11 @@ coverage.xml
 htmlcov/
 relatorio-testes.xml
 .pytest_cache/
+
+# Teste de carga (resultados gerados no PC de quem roda)
+.venv-carga/
+carga*.html
+carga*.csv
+pico*.html
+pico*.csv
+relatorio-defeitos.xml

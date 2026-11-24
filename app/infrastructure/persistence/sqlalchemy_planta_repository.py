@@ -1,17 +1,14 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
-
 from app.domain.entities.planta import Planta
 from app.domain.repositories.planta_repository import PlantaRepository
 from app.infrastructure.persistence.models import PlantaModel
+from app.infrastructure.persistence.repositorio_base import RepositorioSqlAlchemy
 
 
-class SqlAlchemyPlantaRepository(PlantaRepository):
-    def __init__(self, session: Session):
-        self._session = session
-
+class SqlAlchemyPlantaRepository(RepositorioSqlAlchemy, PlantaRepository):
     def _de(self, torre_id: str, usuario_id: str):
+        """Consulta ja filtrada pelo dono: toda leitura passa por aqui."""
         return self._session.query(PlantaModel).filter(
             PlantaModel.torre_id == torre_id,
             PlantaModel.usuario_id == usuario_id,
@@ -26,24 +23,23 @@ class SqlAlchemyPlantaRepository(PlantaRepository):
         return self._para_entidade(modelo) if modelo is not None else None
 
     def criar(self, planta: Planta) -> Planta:
-        modelo = PlantaModel(
+        modelo = self._salvar(PlantaModel(
             nome         = planta.nome,
             tipo         = planta.tipo,
             data_plantio = planta.data_plantio,
             foto_url     = planta.foto_url,
             torre_id     = planta.torre_id,
             usuario_id   = planta.usuario_id,
-        )
-        self._session.add(modelo)
-        self._session.commit()
-        self._session.refresh(modelo)
+        ))
         return self._para_entidade(modelo)
 
     def remover(self, planta_id: int) -> None:
+        # Nao filtra por dono de proposito: o caso de uso DeletarPlanta ja
+        # confere com buscar_por_id(id, torre, usuario) antes de chamar aqui.
         modelo = self._session.get(PlantaModel, planta_id)
         if modelo is not None:
             self._session.delete(modelo)
-            self._session.commit()
+            self._commit()
 
     @staticmethod
     def _para_entidade(modelo: PlantaModel) -> Planta:

@@ -1,7 +1,7 @@
 import json
 import threading
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import redis
 
@@ -33,63 +33,70 @@ class EstadoRedis(EstadoDeMonitoramento):
 
     def __init__(self, url: str):
         self._r = redis.from_url(url, decode_responses=True)
-        self._r.ping()
+        self._r.ping()   # falha ja no start se o Redis estiver fora do ar
 
         self._lock = threading.Lock()
         self._thresholds: Dict[str, Thresholds] = {}
         self._presencas: Dict[str, Presenca] = {}
 
+    # ── Ler/gravar JSON (usado por todos os tipos) ──
+    def _gravar(self, torre_id: str, tipo: str, valor: Dict[str, Any]) -> None:
+        self._r.set(_chave(torre_id, tipo), json.dumps(valor))
+
+    def _ler(self, torre_id: str, tipo: str) -> Optional[Dict[str, Any]]:
+        salvo = self._r.get(_chave(torre_id, tipo))
+        return json.loads(salvo) if salvo else None
+
     # ── Leitura dos sensores ──────────────
     def salvar_leitura(self, torre_id: str, leitura: LeituraAvaliada) -> None:
-        self._r.set(_chave(torre_id, "leitura"), json.dumps({
+        self._gravar(torre_id, "leitura", {
             "bruto":       leitura.leitura.bruto,
             "recebido_em": _data_para_texto(leitura.leitura.recebido_em),
             "alertas":     leitura.alertas,
-        }))
+        })
 
     def ultima_leitura(self, torre_id: str) -> Optional[LeituraAvaliada]:
-        salvo = self._r.get(_chave(torre_id, "leitura"))
-        if not salvo:
+        d = self._ler(torre_id, "leitura")
+        if d is None:
             return None
-        d = json.loads(salvo)
         return LeituraAvaliada(
-            leitura=LeituraSensores(
-                bruto=d["bruto"],
-                recebido_em=_texto_para_data(d["recebido_em"]),
-            ),
+            leitura=LeituraSensores(bruto=d["bruto"], recebido_em=_texto_para_data(d["recebido_em"])),
             alertas=d["alertas"],
         )
 
     # ── Status do motor ───────────────────
     def salvar_status_motor(self, torre_id: str, status: StatusMotor) -> None:
-        self._r.set(_chave(torre_id, "motor"), json.dumps({
+        self._gravar(torre_id, "motor", {
             "bruto":       status.bruto,
             "recebido_em": _data_para_texto(status.recebido_em),
-        }))
+        })
 
     def ultimo_status_motor(self, torre_id: str) -> Optional[StatusMotor]:
-        salvo = self._r.get(_chave(torre_id, "motor"))
-        if not salvo:
+        d = self._ler(torre_id, "motor")
+        if d is None:
             return None
-        d = json.loads(salvo)
-        return StatusMotor(
-            bruto=d["bruto"],
-            recebido_em=_texto_para_data(d["recebido_em"]),
-        )
+        return StatusMotor(bruto=d["bruto"], recebido_em=_texto_para_data(d["recebido_em"]))
 
     # ── Thresholds ────────────────────────
+    # Ficam num cache em memoria porque sao lidos a cada leitura de sensor
+    # (para avaliar alertas) e quase nunca mudam.
     def thresholds(self, torre_id: str) -> Thresholds:
         with self._lock:
             if torre_id not in self._thresholds:
                 t = Thresholds()
-                salvo = self._r.get(_chave(torre_id, "thresholds"))
+                salvo = self._ler(torre_id, "thresholds")
                 if salvo:
-                    t.aplicar(json.loads(salvo))
+                    t.aplicar(salvo)
                 self._thresholds[torre_id] = t
             return self._thresholds[torre_id]
 
     def salvar_thresholds(self, torre_id: str, thresholds: Thresholds) -> None:
-        self._r.set(_chave(torre_id, "thresholds"), json.dumps(thresholds.to_dict()))
+        self._gravar(torre_id, "thresholds", thresholds.to_dict())
+        # Atualiza o cache tambem: antes, salvar um objeto Thresholds NOVO
+        # gravava no Redis, mas os alertas continuavam usando o antigo do
+        # cache ate o proximo restart.
+        with self._lock:
+            self._thresholds[torre_id] = thresholds
 
     # ── Presenca (memoria) ────────────────
     def presenca(self, torre_id: str) -> Presenca:

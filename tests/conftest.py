@@ -9,6 +9,10 @@ os.environ["DATABASE_URL"]  = f"sqlite:///{_pasta}/teste.db"
 os.environ["SERVICO_API_KEY"] = "servico-teste"
 os.environ["JWT_SEGREDO"]     = "segredo-de-teste"
 os.environ["REDIS_URL"]       = ""
+os.environ["INFLUX_URL"]    = ""
+os.environ["INFLUX_TOKEN"]  = ""
+os.environ["INFLUX_ORG"]    = ""
+os.environ["INFLUX_BUCKET"] = ""
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest  # noqa: E402

@@ -68,5 +68,14 @@ EXTENSOES_ACEITAS  = ["jpg", "jpeg", "png", "webp"]
 # ── Log ───────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-#REDIS
+# ── Redis (estado em tempo real) ──────────
+# Vazio = estado fica em memoria (some num restart).
 REDIS_URL = os.getenv("REDIS_URL", "")
+
+# ── InfluxDB (historico das leituras) ─────
+# Os quatro precisam estar preenchidos; faltando qualquer um, o historico
+# fica desligado e o resto do backend funciona normalmente.
+INFLUX_URL    = os.getenv("INFLUX_URL", "").strip()
+INFLUX_TOKEN  = os.getenv("INFLUX_TOKEN", "").strip()
+INFLUX_ORG    = os.getenv("INFLUX_ORG", "").strip()
+INFLUX_BUCKET = os.getenv("INFLUX_BUCKET", "").strip()
