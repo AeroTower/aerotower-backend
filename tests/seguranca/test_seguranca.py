@@ -10,7 +10,7 @@ import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from app.presentation import deps
-from tests.apoio import SERVICO, cabecalho, id_torre, publicar, token, torre_de
+from tests.apoio import SERVICO, cabecalho, id_torre, publicar, token, torre_de, torre_legada_de
 
 
 def _sem_assinatura(dados):
@@ -122,3 +122,26 @@ def test_campos_gigantes_na_loja_sao_recusados(app_e_mqtt):
     cliente, _, _ = app_e_mqtt
     r = cliente.post("/eventos", json={"nome": "cta_diy", "pagina": "/", "sessao": "s" * 10_000})
     assert r.status_code == 422
+
+
+# ── Rotas de administracao (lista de e-mails da validacao) ──────────
+
+@pytest.mark.parametrize("rota", ["/eventos/interesses", "/eventos/exportar", "/eventos/exportar.csv"])
+def test_rota_de_administracao_recusa_chave_errada(app_e_mqtt, rota):
+    cliente, _, _ = app_e_mqtt
+    assert cliente.get(rota, headers={"X-Admin-Key": "chute"}).status_code == 403
+
+
+def test_rota_de_administracao_fica_desligada_sem_chave_configurada(app_e_mqtt, monkeypatch):
+    cliente, _, _ = app_e_mqtt
+    monkeypatch.setattr(deps, "ADMIN_API_KEY", "")
+    assert cliente.get("/eventos/interesses", headers={"X-Admin-Key": ""}).status_code == 401
+    assert cliente.get("/eventos/interesses", headers={"X-Admin-Key": "qualquer"}).status_code == 403
+
+
+def test_rota_legada_nao_obedece_quem_nao_e_dono_do_prototipo(app_e_mqtt):
+    cliente, mqtt, _ = app_e_mqtt
+    torre_legada_de(cliente, "dona-do-prototipo")
+    r = cliente.post("/motor/desligar", headers=cabecalho("intruso"))
+    assert r.status_code == 404
+    assert mqtt.publicados == []

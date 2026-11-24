@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.application.use_cases.atualizar_thresholds import AtualizarThresholds
 from app.application.use_cases.obter_thresholds import ObterThresholds
 from app.core.config import TORRE_LEGADA
-from app.presentation.deps import get_atualizar_thresholds, get_obter_thresholds
+from app.presentation.deps import get_atualizar_thresholds, get_obter_thresholds, get_torre_legada_do_usuario
 from app.presentation.schemas.thresholds import ThresholdsUpdate
 
 # Legado: thresholds da TORRE_LEGADA. Use /torres/{id}/thresholds.
@@ -15,7 +15,8 @@ def get_thresholds(caso_de_uso: ObterThresholds = Depends(get_obter_thresholds))
     return caso_de_uso.executar(TORRE_LEGADA).to_dict()
 
 
-@router.post("/thresholds")
+# Mudar os limites exige o token do dono da TORRE_LEGADA (antes era aberto).
+@router.post("/thresholds", dependencies=[Depends(get_torre_legada_do_usuario)])
 def atualizar_thresholds(
     novos_thresholds: ThresholdsUpdate,
     caso_de_uso: AtualizarThresholds = Depends(get_atualizar_thresholds),

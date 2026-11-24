@@ -35,15 +35,46 @@ REGRAS: Sequence[RegraDeAlerta] = (
 )
 
 
+@dataclass(frozen=True)
+class FaixaFisica:
+    """O que o sensor consegue medir. Fora disso o problema e o sensor, nao a agua."""
+    campo: str
+    minimo: float
+    maximo: float
+    mensagem: str
+
+
+FAIXAS_FISICAS: Sequence[FaixaFisica] = (
+    FaixaFisica("ph", 0, 14, "Sensor de pH com leitura inválida (confira a sonda): {valor}"),
+    FaixaFisica("umidade_relativa", 0, 100, "Sensor de umidade com leitura inválida (confira o sensor): {valor}%"),
+    FaixaFisica("nivel_agua", 0, 100, "Sensor de nível com leitura inválida (confira o sensor): {valor}%"),
+)
+
+
 class AvaliadorDeAlertas:
-    def __init__(self, regras: Sequence[RegraDeAlerta] = REGRAS):
+    def __init__(self, regras: Sequence[RegraDeAlerta] = REGRAS,
+                 faixas: Sequence[FaixaFisica] = FAIXAS_FISICAS):
         self._regras = regras
+        self._faixas = faixas
 
     def avaliar(self, leitura: LeituraSensores, thresholds: Thresholds) -> List[str]:
-        alertas: List[str] = []
+        alertas, sensores_com_defeito = self._sensores_com_defeito(leitura)
         for regra in self._regras:
             valor = getattr(leitura, regra.campo)
             # Sensor ausente (None) nao gera alerta: falta de leitura nao e leitura ruim.
-            if valor is not None and regra.fora_do_limite(valor, getattr(thresholds, regra.limite)):
+            # Leitura impossivel ja virou alerta de sensor: nao manda corrigir a agua.
+            if valor is None or regra.campo in sensores_com_defeito:
+                continue
+            if regra.fora_do_limite(valor, getattr(thresholds, regra.limite)):
                 alertas.append(regra.mensagem.format(valor=valor))
         return alertas
+
+    def _sensores_com_defeito(self, leitura: LeituraSensores):
+        alertas: List[str] = []
+        campos = set()
+        for faixa in self._faixas:
+            valor = getattr(leitura, faixa.campo)
+            if valor is not None and not faixa.minimo <= valor <= faixa.maximo:
+                alertas.append(faixa.mensagem.format(valor=valor))
+                campos.add(faixa.campo)
+        return alertas, campos

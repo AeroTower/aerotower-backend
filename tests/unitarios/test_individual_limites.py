@@ -3,18 +3,15 @@
 Cenario: o dono (ou um bug no app) grava limites impossiveis ou
 contraditorios para os alertas da torre.
 Esperado: a entidade Thresholds recusa (ValueError) e nada muda.
-Obtido hoje: aceita tudo. Com phMin 8 e phMax 6, TODA leitura de pH gera
+Obtido em 24/11/2026 (antes da correcao): aceita tudo. Com phMin 8 e phMax 6, TODA leitura de pH gera
 alerta ("abaixo" ou "acima"), e o dono deixa de confiar nos avisos.
 
-Falha de proposito enquanto o defeito existir. Rodar so estes:
-    pytest -m defeito tests/unitarios/test_individual_limites.py
+Corrigido na refatoracao (Thresholds valida faixa e minimo < maximo); o
+teste passou a fazer parte da suite normal e protege contra a volta do defeito.
 """
 import pytest
 
 from app.domain.entities.thresholds import Thresholds
-
-pytestmark = pytest.mark.defeito
-
 
 @pytest.mark.parametrize(
     "novos, motivo",

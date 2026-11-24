@@ -12,6 +12,7 @@ from app.application.use_cases.obter_resumo_validacao import (
 from app.application.use_cases.registrar_evento import RegistrarEvento
 from app.application.use_cases.registrar_interesse import RegistrarInteresse
 from app.presentation.deps import (
+    exigir_admin,
     get_exportar_eventos,
     get_listar_interesses,
     get_obter_resumo_validacao,
@@ -64,6 +65,7 @@ def obter_resumo(
 
 @router.get(
     "/interesses",
+    dependencies=[Depends(exigir_admin)],
     response_model=list[InteresseResponse],
     summary="Lista os e-mails deixados",
 )
@@ -75,6 +77,7 @@ def listar_interesses(
 
 @router.get(
     "/exportar",
+    dependencies=[Depends(exigir_admin)],
     response_model=list[EventoExportResponse],
     summary="Linhas cruas dos cliques, com a sessão",
 )
@@ -92,6 +95,7 @@ def exportar_eventos(
 
 @router.get(
     "/exportar.csv",
+    dependencies=[Depends(exigir_admin)],
     summary="Mesmos dados em CSV, para abrir na planilha",
 )
 def exportar_eventos_csv(

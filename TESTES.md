@@ -107,21 +107,18 @@ Plataforma de todos: Python 3.11, pytest 9, Ubuntu (GitHub Actions) e Windows (P
 
 ## Testes individuais que acham defeitos (Fernão)
 
-Estes testes afirmam o comportamento **correto** e por isso **falham** enquanto
-o defeito existir. Eles levam a marca `defeito`: ficam fora do passo de
-cobertura e rodam num passo próprio do CI ("Testes que acham defeitos"), que
-aparece em vermelho sem derrubar o deploy. Quando um defeito for corrigido, o
-teste passa e a marca `defeito` pode sair.
+Estes testes afirmam o comportamento **correto**. Em 24/11/2026 todos
+falharam e cada falha mostrou um defeito real. Na refatoração seguinte (ciclo
+do TDD: teste falhando, correção mínima, refatoração) os defeitos de código
+foram corrigidos e os testes saíram da marca `defeito`: agora rodam na suíte
+normal e protegem contra a volta do problema. O passo "Testes que acham
+defeitos" continua no CI para os próximos testes desse tipo.
 
-```bash
-pytest -m defeito -v          # só estes (no PyCharm: Additional Arguments = -m defeito)
-```
-
-| ID | Tipo | Defeito que o teste mostra | Arquivo |
-|---|---|---|---|
-| CT-UNIT-02 | Unitário | Limites de alerta impossíveis são aceitos (pH mín. 8 > máx. 6, umidade 150%) | `tests/unitarios/test_individual_limites.py` |
-| CT-INT-02 | Integração | Leitura com `NaN` pelo MQTT derruba o painel (HTTP 500); `Infinity` vira alerta "inf" | `tests/integracao/test_individual_nan_mqtt.py` |
-| CT-FUNC-02 | Funcional | Comando para torre offline responde "Ciclo iniciado" e o comando se perde | `tests/funcionais/test_individual_torre_offline.py` |
-| CT-ACEIT-02 | Aceitação (BDD) | Sonda de pH solta (-3,2 / 21,4) vira "pH abaixo/acima", sem avisar defeito do sensor | `tests/aceitacao/sonda_ph_com_defeito.feature` |
-| CT-DESEMP-02 | Desempenho | Carga (50 painéis) e pico (200 painéis) na API publicada | `testes-carga/` (Locust, ver README) |
-| CT-SEG-02 | Segurança | Sem login: lista de e-mails da loja e rotas legado que comandam a bomba | `tests/seguranca/test_individual_rotas_sem_login.py` |
+| ID | Tipo | Defeito que o teste mostrou | Correção | Situação |
+|---|---|---|---|---|
+| CT-UNIT-02 | Unitário | Limites de alerta impossíveis eram aceitos (pH mín. 8 > máx. 6, umidade 150%) | `Thresholds` valida a faixa física e mínimo < máximo; a API responde 422 | ✅ Corrigido |
+| CT-INT-02 | Integração | Leitura com `NaN` pelo MQTT derrubava o painel (HTTP 500); `Infinity` virava alerta "inf" | Valores não finitos são descartados na chegada, com aviso | ✅ Corrigido |
+| CT-FUNC-02 | Funcional | Comando para torre offline respondia "Ciclo iniciado" e o comando se perdia | Torre que avisou "offline" responde 409 (ciclo e desligar) | ✅ Corrigido |
+| CT-ACEIT-02 | Aceitação (BDD) | Sonda de pH solta (-3,2 / 21,4) virava "pH abaixo/acima" | Leitura fora da faixa física vira "Sensor de pH com leitura inválida (confira a sonda)" | ✅ Corrigido |
+| CT-DESEMP-02 | Desempenho | API lenta com 50 painéis e fora do ar num pico de 200 (`testes-carga/`, Locust) | Depende de infraestrutura: separar o MQTT do processo da API e escalar na Azure | ⏳ Aberto |
+| CT-SEG-02 | Segurança | Sem login: lista de e-mails da loja e rotas legado que comandavam a bomba | `/eventos/interesses` e exportações pedem `X-Admin-Key` (`ADMIN_API_KEY`); rotas legado de comando pedem o token do dono da `TORRE_LEGADA` | ✅ Corrigido |

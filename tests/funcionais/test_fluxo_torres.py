@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
+from tests.apoio import torre_legada_de
 from tests.conftest import MensagemMqtt
 
 SERVICO = {"X-Service-Key": "servico-teste"}
@@ -128,7 +129,8 @@ def test_legado_continua_funcionando(app_e_mqtt):
     _publicar(container, "hidroponia/sensores", {"ph": 6.0, "temperatura": 25, "umidade": 60})
     r = cliente.get("/dados")
     assert r.status_code == 200 and r.json()["dados"]["ph"] == 6.0
-    assert cliente.post("/motor/desligar").status_code == 200
+    assert cliente.post("/motor/desligar").status_code == 401          # sem login, nao comanda
+    assert cliente.post("/motor/desligar", headers=torre_legada_de(cliente, "dono-legado")).status_code == 200
     assert mqtt.publicados[-1][0] == "hidroponia/motor/comando"
 
 
@@ -247,3 +249,21 @@ def test_sincronizar_do_admin_vale_mesmo_com_versao_menor(app_e_mqtt):
     assert cliente.get("/torres", headers=_h("carla")).json() == []
     # dali em diante a versão do auth volta a mandar
     assert _sincronizar(cliente, torre, dono="joao", versao=4)["aplicado"] is True
+
+
+def test_desligar_bomba_de_torre_offline_avisa_com_409(app_e_mqtt):
+    cliente, mqtt, container = app_e_mqtt
+    from tests.apoio import publicar, torre_de
+    torre, dono = torre_de(cliente, "dona-desligar-offline")
+    publicar(container, f"aerotower/{torre}/status", {"status": "offline"})
+    r = cliente.post(f"/torres/{torre}/motor/desligar", headers=dono)
+    assert r.status_code == 409 and "offline" in r.json()["detail"]
+    assert mqtt.publicados == []
+
+
+def test_limites_impossiveis_pela_api_respondem_422(app_e_mqtt):
+    cliente, _, _ = app_e_mqtt
+    from tests.apoio import torre_de
+    torre, dono = torre_de(cliente, "dona-limites")
+    r = cliente.post(f"/torres/{torre}/thresholds", headers=dono, json={"phMin": 8, "phMax": 6})
+    assert r.status_code == 422 and "phMin" in r.json()["detail"]

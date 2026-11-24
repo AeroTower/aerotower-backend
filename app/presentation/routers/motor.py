@@ -8,6 +8,7 @@ from app.presentation.deps import (
     get_desligar_motor,
     get_iniciar_ciclo_motor,
     get_obter_status_motor,
+    get_torre_legada_do_usuario,
 )
 from app.presentation.schemas.motor import ComandoCiclo
 
@@ -15,7 +16,9 @@ from app.presentation.schemas.motor import ComandoCiclo
 router = APIRouter(prefix="/motor", tags=["Legado (torre única)"], deprecated=True)
 
 
-@router.post("/ciclo", summary="Inicia ciclo automático da bomba")
+# Comandar a bomba exige o token do dono da TORRE_LEGADA (antes era aberto).
+@router.post("/ciclo", summary="Inicia ciclo automático da bomba",
+             dependencies=[Depends(get_torre_legada_do_usuario)])
 def iniciar_ciclo(
     body: ComandoCiclo,
     caso_de_uso: IniciarCicloMotor = Depends(get_iniciar_ciclo_motor),
@@ -28,7 +31,8 @@ def iniciar_ciclo(
     }
 
 
-@router.post("/desligar", summary="Para o motor imediatamente")
+@router.post("/desligar", summary="Para o motor imediatamente",
+             dependencies=[Depends(get_torre_legada_do_usuario)])
 def desligar_motor(caso_de_uso: DesligarMotor = Depends(get_desligar_motor)):
     comando = caso_de_uso.executar(TORRE_LEGADA)
     return {

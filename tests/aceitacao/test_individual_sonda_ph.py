@@ -5,17 +5,17 @@ para trocar a sonda em vez de colocar produto na agua a toa."
 O pH so existe de 0 a 14. Fora disso, e a sonda (solta, em curto ou sem
 calibracao), nao a agua. O proprio firmware classifica esse caso como
 "leitura_invalida", mas o Backend ignora essa informacao.
-Obtido hoje: o painel mostra "pH abaixo do limite: -3.2" (ou "acima: 21.4"),
+Obtido em 24/11/2026 (antes da correcao): o painel mostra "pH abaixo do limite: -3.2" (ou "acima: 21.4"),
 e o dono e levado a corrigir uma agua que pode estar perfeita.
+
+Corrigido na refatoracao: o teste passou a fazer parte da suite normal e
+protege contra a volta do defeito.
 """
 import uuid
 
-import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
 from tests.apoio import publicar, torre_de
-
-pytestmark = pytest.mark.defeito
 
 scenarios("sonda_ph_com_defeito.feature")
 

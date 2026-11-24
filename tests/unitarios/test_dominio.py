@@ -195,3 +195,34 @@ def test_mensagens_das_excecoes():
     assert str(exc.AcessoNegado()) == "Acesso negado."
     assert exc.TorreNaoEncontrada("AT-1").torre_id == "AT-1"
     assert "AT-<MAC>" in str(exc.IdDeTorreInvalido("x"))
+
+
+# ── Faixas fisicas (sensor com defeito) e limites invalidos ─────────
+
+@pytest.mark.parametrize("valor", ["seis", float("nan"), float("inf"), True])
+def test_thresholds_recusa_limite_que_nao_e_numero(valor):
+    limites = Thresholds()
+    with pytest.raises(exc.LimitesInvalidos):
+        limites.aplicar({"phMin": valor})
+    assert limites.ph_min == 5.5
+
+
+def test_thresholds_aceita_mudanca_coerente_e_valida_o_par_inteiro():
+    limites = Thresholds()
+    limites.aplicar({"phMin": 6.0, "phMax": 7.0})
+    assert (limites.ph_min, limites.ph_max) == (6.0, 7.0)
+    with pytest.raises(exc.LimitesInvalidos, match="menor que phMax"):
+        limites.aplicar({"phMin": 7.5})          # passaria do maximo ja gravado
+
+
+@pytest.mark.parametrize("dados, esperado", [
+    ({"umidadeRelativa": 130}, "Sensor de umidade"),
+    ({"nivelAgua": -5}, "Sensor de nível"),
+])
+def test_leitura_impossivel_vira_alerta_de_sensor_e_nao_de_limite(dados, esperado):
+    alertas = AvaliadorDeAlertas().avaliar(LeituraSensores(bruto=dados), Thresholds())
+    assert len(alertas) == 1 and alertas[0].startswith(esperado)
+
+
+def test_leitura_nan_vira_sem_leitura():
+    assert LeituraSensores(bruto={"ph": float("nan")}).ph is None

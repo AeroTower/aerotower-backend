@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -39,9 +40,10 @@ class LeituraSensores:
 
     def _valor(self, chave: str) -> Optional[float]:
         valor = self.bruto.get(chave)
-        if isinstance(valor, bool):
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
             return None
-        return valor if isinstance(valor, (int, float)) else None
+        # NaN e infinito nao sao medida: viram "sem leitura".
+        return valor if math.isfinite(valor) else None
 
     def _primeiro(self, *chaves: str) -> Optional[float]:
         for chave in chaves:
