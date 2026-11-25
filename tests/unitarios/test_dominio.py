@@ -6,7 +6,7 @@ from app.domain.entities.kit import Kit, capacidades_do_kit, filtrar_por_capacid
 from app.domain.entities.leitura import ComandoMotor, LeituraSensores
 from app.domain.entities.thresholds import Thresholds
 from app.domain.entities.torre import Torre, id_de_torre_valido
-from app.domain.services.avaliador_alertas import AvaliadorDeAlertas
+from app.domain.services.avaliador_alertas import ACIMA, REGRAS, AvaliadorDeAlertas, RegraDeAlerta
 from app.domain.services.validador_evento import ValidadorDeEvento
 
 
@@ -88,6 +88,26 @@ def test_valor_no_limite_exato_nao_e_alerta():
     bruto = {"ph": t.ph_min, "nivelAgua": t.nivel_agua_min}
     assert AvaliadorDeAlertas().avaliar(LeituraSensores(bruto=bruto), t) == []
 
+
+
+def test_mensagem_do_alerta_mantem_o_formato_antigo():
+    # A refatoracao trocou os if por uma tabela; o texto que o app mostra nao muda.
+    alertas = AvaliadorDeAlertas().avaliar(
+        LeituraSensores(bruto={"ph": 4.5, "temperaturaAgua": 31.5}), Thresholds())
+    assert alertas == ["pH abaixo do limite: 4.5", "Temperatura da água alta: 31.5°C"]
+
+
+def test_cada_regra_aponta_para_campos_que_existem():
+    leitura, limites = LeituraSensores(bruto={}), Thresholds()
+    for regra in REGRAS:
+        assert hasattr(leitura, regra.campo), regra.campo
+        assert hasattr(limites, regra.limite), regra.limite
+
+
+def test_regra_nova_entra_sem_mudar_o_avaliador():
+    regra = RegraDeAlerta("ph", "ph_max", ACIMA, "pH alto demais: {valor}")
+    alertas = AvaliadorDeAlertas(regras=[regra]).avaliar(LeituraSensores(bruto={"ph": 9}), Thresholds())
+    assert alertas == ["pH alto demais: 9"]
 
 # ── Kit e torre ──────────────────────────────────────────────
 
@@ -175,3 +195,34 @@ def test_mensagens_das_excecoes():
     assert str(exc.AcessoNegado()) == "Acesso negado."
     assert exc.TorreNaoEncontrada("AT-1").torre_id == "AT-1"
     assert "AT-<MAC>" in str(exc.IdDeTorreInvalido("x"))
+
+
+# ── Faixas fisicas (sensor com defeito) e limites invalidos ─────────
+
+@pytest.mark.parametrize("valor", ["seis", float("nan"), float("inf"), True])
+def test_thresholds_recusa_limite_que_nao_e_numero(valor):
+    limites = Thresholds()
+    with pytest.raises(exc.LimitesInvalidos):
+        limites.aplicar({"phMin": valor})
+    assert limites.ph_min == 5.5
+
+
+def test_thresholds_aceita_mudanca_coerente_e_valida_o_par_inteiro():
+    limites = Thresholds()
+    limites.aplicar({"phMin": 6.0, "phMax": 7.0})
+    assert (limites.ph_min, limites.ph_max) == (6.0, 7.0)
+    with pytest.raises(exc.LimitesInvalidos, match="menor que phMax"):
+        limites.aplicar({"phMin": 7.5})          # passaria do maximo ja gravado
+
+
+@pytest.mark.parametrize("dados, esperado", [
+    ({"umidadeRelativa": 130}, "Sensor de umidade"),
+    ({"nivelAgua": -5}, "Sensor de nível"),
+])
+def test_leitura_impossivel_vira_alerta_de_sensor_e_nao_de_limite(dados, esperado):
+    alertas = AvaliadorDeAlertas().avaliar(LeituraSensores(bruto=dados), Thresholds())
+    assert len(alertas) == 1 and alertas[0].startswith(esperado)
+
+
+def test_leitura_nan_vira_sem_leitura():
+    assert LeituraSensores(bruto={"ph": float("nan")}).ph is None

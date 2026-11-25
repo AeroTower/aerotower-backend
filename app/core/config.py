@@ -46,6 +46,10 @@ JWT_SEGREDO = os.getenv("JWT_SEGREDO", "")
 # Vazia = rota desligada.
 SERVICO_API_KEY = os.getenv("SERVICO_API_KEY", "")
 
+# Chave das rotas de administracao (lista de e-mails e exportacao da
+# validacao). Vazia = rotas desligadas. Mandar no header X-Admin-Key.
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "").strip()
+
 # ── Banco de dados ────────────────────────
 # Em Azure o valor deve vir via variavel de ambiente do App Service.
 # Fallback apenas para desenvolvedor local.

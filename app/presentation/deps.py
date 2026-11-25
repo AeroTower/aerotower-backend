@@ -2,7 +2,7 @@ import secrets
 from typing import Iterator, Optional
 
 from fastapi import Depends, Header, Path
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.application.use_cases.atualizar_thresholds import AtualizarThresholds
@@ -28,7 +28,7 @@ from app.application.use_cases.processar_status_motor import ProcessarStatusMoto
 from app.application.use_cases.sincronizar_torre import SincronizarTorre
 from app.application.use_cases.registrar_evento import RegistrarEvento
 from app.application.use_cases.registrar_interesse import RegistrarInteresse
-from app.core.config import JWT_SEGREDO, REDIS_URL, SERVICO_API_KEY
+from app.core.config import ADMIN_API_KEY, JWT_SEGREDO, REDIS_URL, SERVICO_API_KEY, TORRE_LEGADA
 from app.domain.entities.torre import Torre
 from app.domain.exceptions import AcessoNegado, NaoAutenticado
 from app.domain.services.avaliador_alertas import AvaliadorDeAlertas
@@ -58,7 +58,6 @@ from app.infrastructure.storage.filesystem_foto_storage import FilesystemFotoSto
 class Container:
     def __init__(self):
         self.mqtt_client   = criar_cliente()
-        self.estado        = EstadoEmMemoria()
         self.notificador   = WebSocketNotificador()
         self.armazenamento = FilesystemFotoStorage()
         self.avaliador     = AvaliadorDeAlertas()
@@ -66,6 +65,9 @@ class Container:
         self.publicador    = MqttPublicador(self.mqtt_client)
         self.catalogo      = CatalogoSqlAlchemy()
         self.historico     = HistoricoInflux()
+        # Redis quando configurado (varias instancias); senao, memoria local.
+        # Antes havia uma primeira atribuicao a EstadoEmMemoria() que era
+        # descartada logo abaixo.
         self.estado        = EstadoRedis(REDIS_URL) if REDIS_URL else EstadoEmMemoria()
 
         self.validador_sessao = JwtValidador(JWT_SEGREDO)
@@ -87,8 +89,8 @@ class Container:
         self.obter_alertas        = ObterAlertas(self.estado)
         self.obter_thresholds     = ObterThresholds(self.estado)
         self.atualizar_thresholds = AtualizarThresholds(self.estado)
-        self.iniciar_ciclo_motor  = IniciarCicloMotor(self.publicador)
-        self.desligar_motor       = DesligarMotor(self.publicador)
+        self.iniciar_ciclo_motor  = IniciarCicloMotor(self.publicador, self.estado)
+        self.desligar_motor       = DesligarMotor(self.publicador, self.estado)
         self.obter_status_motor   = ObterStatusMotor(self.estado)
 
 
@@ -228,6 +230,31 @@ def get_torre_do_usuario(
 ) -> Torre:
     """Toda rota /torres/{torre_id}/... passa por aqui: so o dono entra."""
     return ObterTorreDoUsuario(torres).executar(usuario_id, torre_id.upper())
+
+
+def get_torre_legada_do_usuario(
+    usuario_id: str = Depends(get_usuario_id),
+    torres: SqlAlchemyTorreRepository = Depends(get_torre_repository),
+) -> Torre:
+    """Rotas legadas que COMANDAM a torre do prototipo: so o dono dela."""
+    return ObterTorreDoUsuario(torres).executar(usuario_id, TORRE_LEGADA)
+
+
+# =============================================
+# Rotas de administracao (dados pessoais da validacao)
+# =============================================
+
+_chave_admin = APIKeyHeader(name="X-Admin-Key", auto_error=False,
+                            description="Chave de administração (ADMIN_API_KEY do Back-End)")
+
+
+def exigir_admin(chave: Optional[str] = Depends(_chave_admin)) -> None:
+    if not chave:
+        raise NaoAutenticado("Envie o header X-Admin-Key.")
+    if not ADMIN_API_KEY:
+        raise AcessoNegado("Rotas de administração desligadas (ADMIN_API_KEY não definida).")
+    if not secrets.compare_digest(chave, ADMIN_API_KEY):
+        raise AcessoNegado("Chave de administração inválida.")
 
 
 def get_listar_minhas_torres(

@@ -1,5 +1,5 @@
 # language: pt
-# CT-ACEIT-02 (teste individual). Falha de proposito enquanto o defeito existir.
+# CT-ACEIT-02 (teste individual). Corrigido na refatoracao: agora passa e protege contra a volta do defeito.
 Funcionalidade: Avisar quando a sonda de pH está com defeito
   Como dono de uma torre AeroTower
   Quero saber quando a leitura de pH é impossível

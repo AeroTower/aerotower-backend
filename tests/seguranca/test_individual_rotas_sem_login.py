@@ -3,16 +3,16 @@
 Ataque: alguem sem conta nenhuma chama a API publica direto (navegador,
 curl ou o proprio Swagger em /docs), sem o cabecalho Authorization.
 Esperado: HTTP 401 em tudo que le dado pessoal ou comanda equipamento.
-Obtido hoje:
+Obtido em 24/11/2026 (antes da correcao):
   * GET /eventos/interesses devolve os e-mails que os visitantes deixaram
     na loja (dado pessoal: LGPD, art. 46 - medidas de seguranca);
   * POST /motor/desligar, /motor/ciclo e /thresholds (rotas "legado")
     comandam a torre configurada em TORRE_LEGADA e mudam os limites dela.
+
+Corrigido na refatoracao: o teste passou a fazer parte da suite normal e
+protege contra a volta do defeito.
 """
 import pytest
-
-pytestmark = pytest.mark.defeito
-
 
 def test_lista_de_emails_da_loja_exige_login(app_e_mqtt):
     cliente, _, _ = app_e_mqtt

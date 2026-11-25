@@ -61,3 +61,18 @@ class IdDeTorreInvalido(ErroDeDominio):
 class AcessoNegado(ErroDeDominio):
     def __init__(self, motivo: str = "Acesso negado."):
         super().__init__(motivo)
+
+
+class TorreOffline(ErroDeDominio):
+    """Comando para uma torre que avisou que caiu: o broker descartaria o comando."""
+
+    def __init__(self, torre_id: str):
+        self.torre_id = torre_id
+        super().__init__(
+            f"A torre {torre_id} está offline: o comando não chegaria até ela. "
+            "Confira a energia e o Wi-Fi da torre e tente de novo."
+        )
+
+
+class LimitesInvalidos(ErroDeDominio, ValueError):
+    """Limites de alerta fora da faixa física ou com mínimo >= máximo."""

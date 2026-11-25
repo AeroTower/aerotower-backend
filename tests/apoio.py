@@ -1,4 +1,5 @@
 """Funcoes de apoio usadas pelos testes de integracao, seguranca e desempenho."""
+import itertools
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -8,6 +9,8 @@ import jwt
 from tests.conftest import MensagemMqtt
 
 SERVICO = {"X-Service-Key": "servico-teste"}
+ADMIN = {"X-Admin-Key": "admin-teste"}
+_versoes = itertools.count(1000)
 
 
 def token(usuario_id, segredo="segredo-de-teste", emissor="aerotower-auth", minutos=60, **extra):
@@ -38,6 +41,13 @@ def torre_de(cliente, dono, kit="pro"):
     torre_id = id_torre()
     sincronizar(cliente, torre_id, kit=kit, dono=dono, versao=2)
     return torre_id, cabecalho(dono)
+
+
+def torre_legada_de(cliente, dono):
+    """Vincula a TORRE_LEGADA (prototipo) a `dono` e devolve o cabecalho dele."""
+    from app.core.config import TORRE_LEGADA
+    sincronizar(cliente, TORRE_LEGADA, dono=dono, versao=next(_versoes))
+    return cabecalho(dono)
 
 
 def publicar(container, topico, dados):

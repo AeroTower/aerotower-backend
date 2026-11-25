@@ -5,3 +5,4 @@ httpx
 fakeredis
 pytest-bdd
 pytest-cov
+ruff==0.17.6

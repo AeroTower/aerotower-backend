@@ -27,7 +27,9 @@ def _linhas_junit(caminho):
 
 def _linhas_flutter(caminho):
     nomes, erros, resultados = {}, {}, {}
-    for linha in open(caminho, encoding="utf-8"):
+    with open(caminho, encoding="utf-8") as arquivo:
+        eventos = [linha for linha in arquivo]
+    for linha in eventos:
         try:
             ev = json.loads(linha)
         except ValueError:

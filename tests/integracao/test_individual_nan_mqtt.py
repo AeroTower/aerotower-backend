@@ -8,18 +8,17 @@ credencial do broker, que hoje e a mesma para todas as torres) publica
 {"ph": NaN} ou {"ph": 1e999}. O json do Python aceita os dois.
 Esperado: o Backend descarta o valor invalido; o painel continua abrindo
 (HTTP 200) e nao mostra "inf" num alerta.
-Obtido hoje: com NaN, GET /torres/{id}/dados responde 500 (o FastAPI nao
+Obtido em 24/11/2026 (antes da correcao): com NaN, GET /torres/{id}/dados responde 500 (o FastAPI nao
 consegue transformar NaN em JSON) e o painel do dono para de abrir ate a
 torre mandar outra leitura. Com Infinity, o alerta diz
 "pH acima do limite: inf".
+
+Corrigido na refatoracao: o teste passou a fazer parte da suite normal e
+protege contra a volta do defeito.
 """
-import pytest
 from fastapi.testclient import TestClient
 
 from tests.apoio import publicar, torre_de
-
-pytestmark = pytest.mark.defeito
-
 
 def _como_em_producao(app):
     # Erro do servidor vira HTTP 500, como no uvicorn da Azure (o TestClient

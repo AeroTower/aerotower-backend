@@ -8,10 +8,12 @@ from app.domain.exceptions import (
     FalhaNaPublicacao,
     FormatoDeFotoInvalido,
     IdDeTorreInvalido,
+    LimitesInvalidos,
     NaoAutenticado,
     NenhumDadoDisponivel,
     PlantaNaoEncontrada,
     TorreNaoEncontrada,
+    TorreOffline,
 )
 
 _STATUS_POR_EXCECAO = {
@@ -25,6 +27,8 @@ _STATUS_POR_EXCECAO = {
     AcessoNegado:             403,
     TorreNaoEncontrada:       404,
     IdDeTorreInvalido:        422,
+    LimitesInvalidos:         422,
+    TorreOffline:             409,
 }
 
 

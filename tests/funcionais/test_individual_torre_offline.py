@@ -6,15 +6,14 @@ false na propria API). O dono pede um ciclo da bomba.
 Esperado: a API avisa que a torre esta offline (HTTP 409) e nao finge
 que deu certo. O comando vai com QoS 1 mas sem "retain", e a torre
 conecta com sessao limpa: se ela esta fora, o broker descarta o comando.
-Obtido hoje: HTTP 200 "Ciclo iniciado: 10 min ligado / 20 min desligado",
+Obtido em 24/11/2026 (antes da correcao): HTTP 200 "Ciclo iniciado: 10 min ligado / 20 min desligado",
 o app mostra sucesso e a torre nunca recebe nada.
+
+Corrigido na refatoracao: o teste passou a fazer parte da suite normal e
+protege contra a volta do defeito.
 """
-import pytest
 
 from tests.apoio import publicar, torre_de
-
-pytestmark = pytest.mark.defeito
-
 
 def test_ciclo_para_torre_offline_avisa_em_vez_de_fingir_sucesso(app_e_mqtt):
     cliente, mqtt, container = app_e_mqtt

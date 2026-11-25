@@ -7,8 +7,9 @@ from pathlib import Path
 _pasta = tempfile.mkdtemp()
 os.environ["DATABASE_URL"]  = f"sqlite:///{_pasta}/teste.db"
 os.environ["SERVICO_API_KEY"] = "servico-teste"
+os.environ["ADMIN_API_KEY"]   = "admin-teste"
 os.environ["JWT_SEGREDO"]     = "segredo-de-teste"
-os.environ["REDIS_URL"]       = "" 
+os.environ["REDIS_URL"]       = ""
 os.environ["INFLUX_URL"]    = ""
 os.environ["INFLUX_TOKEN"]  = ""
 os.environ["INFLUX_ORG"]    = ""

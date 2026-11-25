@@ -7,7 +7,7 @@ um duble.
 import json
 
 from app.domain.exceptions import FalhaNaPublicacao
-from tests.apoio import publicar, torre_de
+from tests.apoio import ADMIN, publicar, torre_de, torre_legada_de
 
 
 # ── Rotas gerais e CORS ──────────────────────────────────────
@@ -40,10 +40,10 @@ def test_eventos_resumo_interesses_e_exportacao(app_e_mqtt):
     assert kits["total"] >= 3 and kits["sessoes"] >= 2
     assert resumo["total_interesses"] >= 1
 
-    assert "ana@exemplo.com" in [i["email"] for i in cliente.get("/eventos/interesses").json()]
-    assert any(e["sessao"] == "s2" for e in cliente.get("/eventos/exportar").json())
+    assert "ana@exemplo.com" in [i["email"] for i in cliente.get("/eventos/interesses", headers=ADMIN).json()]
+    assert any(e["sessao"] == "s2" for e in cliente.get("/eventos/exportar", headers=ADMIN).json())
 
-    csv = cliente.get("/eventos/exportar.csv")
+    csv = cliente.get("/eventos/exportar.csv", headers=ADMIN)
     assert csv.headers["content-type"].startswith("text/csv")
     assert csv.text.splitlines()[0] == "id,evento,pagina,sessao,criado_em"
     assert "cta_ver_kits" in csv.text
@@ -139,13 +139,15 @@ def test_foto_em_formato_nao_aceito_da_400(app_e_mqtt):
 
 def test_legado_thresholds_alertas_e_motor(app_e_mqtt):
     cliente, mqtt, container = app_e_mqtt
-    assert cliente.post("/thresholds", json={"nivelAguaMin": 50}).json()["thresholds"]["nivelAguaMin"] == 50
+    dono = torre_legada_de(cliente, "dono-do-prototipo")
+    r = cliente.post("/thresholds", json={"nivelAguaMin": 50}, headers=dono)
+    assert r.json()["thresholds"]["nivelAguaMin"] == 50
     assert cliente.get("/thresholds").json()["nivelAguaMin"] == 50
 
     publicar(container, "hidroponia/sensores", {"nivelAgua": 40})
     assert any("Nível" in a for a in cliente.get("/alertas").json()["alertas"])
 
-    r = cliente.post("/motor/ciclo", json={"minutos_ligado": 5, "minutos_desligado": 25})
+    r = cliente.post("/motor/ciclo", json={"minutos_ligado": 5, "minutos_desligado": 25}, headers=dono)
     assert r.status_code == 200 and mqtt.publicados[-1][0] == "hidroponia/motor/comando"
 
     publicar(container, "hidroponia/motor/status", {"ligado": True})
